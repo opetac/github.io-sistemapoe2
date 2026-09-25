@@ -29,11 +29,104 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     #map { height: 100%; min-height: 250px; }
-    /* Fix para iOS overflow */
     .touch-scroll { -webkit-overflow-scrolling: touch; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans antialiased">
+
+  <!-- ========================================== -->
+  <!-- PANTALLA DE AUTENTICACIÓN (LOGIN / REGISTRO) -->
+  <!-- ========================================== -->
+  <div id="authScreen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      
+      <!-- Encabezado Auth -->
+      <div class="text-center mb-6">
+        <div class="inline-flex bg-blue-600/20 text-blue-500 p-3 rounded-2xl mb-3 border border-blue-500/30">
+          <i class="fa-solid fa-shield-halved text-3xl"></i>
+        </div>
+        <h2 class="text-xl font-bold text-white tracking-wide">ACCESO AL SISTEMA</h2>
+        <p class="text-xs text-slate-400 mt-1">Plataforma de Inteligencia & Búsqueda Operativa</p>
+      </div>
+
+      <!-- Conmutador de Pestañas (Login / Registro) -->
+      <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-6 text-xs">
+        <button onclick="switchAuthTab('login')" id="tabLogin" class="flex-1 py-2 font-bold rounded-lg bg-blue-600 text-white transition text-center">
+          Iniciar Sesión
+        </button>
+        <button onclick="switchAuthTab('register')" id="tabRegister" class="flex-1 py-2 font-bold rounded-lg text-slate-400 transition text-center hover:text-white">
+          Crear Cuenta
+        </button>
+      </div>
+
+      <!-- FORMULARIO DE INICIO DE SESIÓN -->
+      <form id="formLogin" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Usuario / Correo</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3 top-3 text-slate-500 text-xs"></i>
+            <input type="text" id="loginUser" required placeholder="ej. 110543 o correo@gmail.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Contraseña</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-3 text-slate-500 text-xs"></i>
+            <input type="password" id="loginPass" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+          </div>
+        </div>
+
+        <div id="loginError" class="hidden text-red-400 text-xs bg-red-950/40 border border-red-800/50 p-2.5 rounded-lg text-center font-medium">
+          Usuario o contraseña incorrectos.
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-right-to-bracket"></i> Acceder al Sistema
+        </button>
+      </form>
+
+      <!-- FORMULARIO DE REGISTRO DE USUARIO -->
+      <form id="formRegister" onsubmit="handleRegister(event)" class="space-y-3 hidden">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Nombre Completo</label>
+          <input type="text" id="regName" required placeholder="Nombre y Apellidos" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Usuario / Nómina</label>
+          <input type="text" id="regUser" required placeholder="ej. 110543" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Correo Electrónico</label>
+          <input type="email" id="regEmail" required placeholder="correo@ejemplo.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Contraseña</label>
+          <input type="password" id="regPass" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div class="text-[10px] text-slate-500 text-center px-2">
+          Al registrarte, se guardará un registro de auditoría con la hora, ubicación y datos de tu dispositivo.
+        </div>
+
+        <div id="regSuccess" class="hidden text-emerald-400 text-xs bg-emerald-950/40 border border-emerald-800/50 p-2.5 rounded-lg text-center font-medium">
+          ¡Usuario registrado con éxito! Ya puedes iniciar sesión.
+        </div>
+        
+        <div id="regLoading" class="hidden text-blue-400 text-xs text-center font-medium my-2">
+          <i class="fa-solid fa-spinner fa-spin"></i> Registrando usuario y capturando ubicación...
+        </div>
+
+        <button type="submit" id="btnRegisterSubmit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-user-plus"></i> Registrar Usuario
+        </button>
+      </form>
+
+    </div>
+  </div>
 
   <!-- TOPBAR RESPONSIVA -->
   <header class="bg-slate-950 border-b border-slate-800 px-4 py-2.5 flex justify-between items-center z-30 shrink-0">
@@ -53,6 +146,16 @@
     </div>
     
     <div class="flex items-center space-x-2">
+      <!-- Usuario Activo & Logout -->
+      <div id="userInfoHeader" class="hidden sm:flex items-center gap-2 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-xs mr-1">
+        <i class="fa-solid fa-user-shield text-blue-400"></i>
+        <span id="activeUserName" class="font-bold text-slate-200 truncate max-w-[140px]"></span>
+      </div>
+
+      <button onclick="logout()" title="Cerrar Sesión" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs p-2 sm:px-3 sm:py-2 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Salir</span>
+      </button>
+
       <button onclick="syncData()" id="btnSync" title="Sincronizar" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs p-2 sm:px-3 sm:py-2 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
         <i class="fa-solid fa-rotate" id="syncIcon"></i> <span class="hidden sm:inline">Sincronizar</span>
       </button>
@@ -68,7 +171,7 @@
     <!-- BACKDROP PARA MÓVIL -->
     <div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden backdrop-blur-sm"></div>
 
-    <!-- SIDEBAR / FILTROS (Drapeau Móvil + Barra Lateral en Desktop) -->
+    <!-- SIDEBAR / FILTROS -->
     <aside id="sidebarDrawer" class="fixed lg:relative inset-y-0 left-0 z-40 w-80 bg-slate-950 border-r border-slate-800 flex flex-col p-4 custom-scrollbar overflow-y-auto space-y-4 transition-transform duration-300 -translate-x-full lg:translate-x-0 shrink-0">
       
       <div class="flex justify-between items-center lg:hidden border-b border-slate-800 pb-2">
@@ -81,7 +184,7 @@
         <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Búsqueda General (Persona / Alias / CURP)</label>
         <div class="relative">
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-sm"></i>
-          <input type="text" id="filterGeneral" oninput="debouncedApplyFilters()" placeholder="Nombre, alias, CURP, teléfono..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+          <input type="text" id="filterGeneral" oninput="debouncedApplyFilters()" placeholder="Nombre, alias, CURP, motivo, teléfono..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
         </div>
       </div>
 
@@ -146,7 +249,7 @@
     <!-- MAIN DASHBOARD CONTENT -->
     <main class="flex-1 flex flex-col overflow-hidden bg-slate-900">
       
-      <!-- CONTROLES DE PESTAÑA PARA MÓVIL (MÓVIL ONLY) -->
+      <!-- CONTROLES DE PESTAÑA PARA MÓVIL -->
       <div class="flex lg:hidden bg-slate-950 border-b border-slate-800 p-1 shrink-0">
         <button onclick="switchMobileTab('cards')" id="tabBtnCards" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-blue-600 text-white text-center">
           <i class="fa-solid fa-users"></i> Resultados (<span id="mobileCount">0</span>)
@@ -179,7 +282,6 @@
               <i class="fa-solid fa-map-location-dot text-red-500"></i> Georreferenciación
             </h2>
             
-            <!-- Conmutador: Puntos vs Mapa de Calor -->
             <div class="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px]">
               <button onclick="setMapMode('markers')" id="btnMapMarkers" class="px-2.5 py-1 rounded-md font-semibold bg-blue-600 text-white transition">
                 <i class="fa-solid fa-location-dot"></i> Puntos
@@ -224,14 +326,25 @@
           <div id="modalGallery" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
         </div>
 
+        <!-- MOTIVO Y ESTATUS DESTACADO -->
+        <div class="bg-amber-950/40 border border-amber-800/60 p-3 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Motivo de Detención / Abordamiento</span>
+            <p id="mMotive" class="text-sm font-bold text-amber-200 mt-0.5"></p>
+          </div>
+          <span id="mSourceBadge" class="bg-slate-800 text-slate-200 text-[10px] px-2.5 py-1 rounded-md font-semibold border border-slate-700"></span>
+        </div>
+
         <!-- Detalles Personales & Evento -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950 p-3.5 sm:p-4 rounded-xl border border-slate-800">
           <div class="space-y-2">
             <h4 class="text-blue-400 font-bold uppercase border-b border-slate-800 pb-1">Datos Personales</h4>
-            <p><strong class="text-slate-400">Nombre Completo:</strong> <span id="mFullName" class="text-slate-200"></span></p>
-            <p><strong class="text-slate-400">Alias:</strong> <span id="mAlias" class="text-yellow-400 font-semibold"></span></p>
+            <p><strong class="text-slate-400">Nombre Completo:</strong> <span id="mFullName" class="text-slate-200 font-semibold"></span></p>
+            <p><strong class="text-slate-400">Alias / Apodo:</strong> <span id="mAlias" class="text-yellow-400 font-semibold"></span></p>
             <p><strong class="text-slate-400">Edad / Nacimiento:</strong> <span id="mAge"></span></p>
+            <p><strong class="text-slate-400">Sexo / Origen:</strong> <span id="mGenderOrigin"></span></p>
             <p><strong class="text-slate-400">CURP:</strong> <span id="mCurp" class="font-mono"></span></p>
+            <p><strong class="text-slate-400">Ocupación / Oficio:</strong> <span id="mOccupation"></span></p>
             <p><strong class="text-slate-400">Teléfono:</strong> <span id="mPhone"></span></p>
             <p><strong class="text-slate-400">Domicilio:</strong> <span id="mAddress"></span></p>
           </div>
@@ -239,11 +352,12 @@
           <div class="space-y-2">
             <h4 class="text-blue-400 font-bold uppercase border-b border-slate-800 pb-1">Datos del Evento / Vehículo</h4>
             <p><strong class="text-slate-400">Fecha / Hora:</strong> <span id="mDateTime"></span></p>
-            <p><strong class="text-slate-400">Lugar / Sector:</strong> <span id="mLocation"></span></p>
+            <p><strong class="text-slate-400">Lugar / Dirección:</strong> <span id="mLocation"></span></p>
+            <p><strong class="text-slate-400">Zona / Sector:</strong> <span id="mZoneSector"></span></p>
+            <p><strong class="text-slate-400">Unidad / CRP Capturista:</strong> <span id="mUnitCrp"></span></p>
             <p><strong class="text-slate-400">Vehículo:</strong> <span id="mVehicleInfo"></span></p>
             <p><strong class="text-slate-400">Placas:</strong> <span id="mPlates" class="bg-slate-800 px-2 py-0.5 rounded font-mono text-white"></span></p>
             <p><strong class="text-slate-400">NIV / Serie:</strong> <span id="mVin" class="font-mono"></span></p>
-            <p><strong class="text-slate-400">Fuente:</strong> <span id="mSource" class="text-emerald-400 font-semibold"></span></p>
           </div>
         </div>
 
@@ -251,7 +365,7 @@
     </div>
   </div>
 
-  <!-- MODAL BÚSQUEDA POR FOTO CON SOPORTE MÓVIL NATIVO -->
+  <!-- MODAL BÚSQUEDA POR FOTO -->
   <div id="cameraModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-4">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-4 sm:p-6 flex flex-col space-y-4 shadow-2xl max-h-[95dvh] overflow-y-auto custom-scrollbar">
       <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
@@ -274,13 +388,11 @@
         </div>
 
         <div class="flex flex-col space-y-2.5">
-          <!-- Botón de Cámara Nativa del Celular -->
           <label class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-2.5 px-3 rounded-lg font-semibold transition cursor-pointer text-center flex items-center justify-center gap-2 shadow">
             <i class="fa-solid fa-camera"></i> Tomar Foto con Cámara Nativa
             <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handleFileUpload(event)" />
           </label>
 
-          <!-- Botón de Abrir Visor WebRTC -->
           <button onclick="startCamera()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs py-2.5 px-3 rounded-lg font-medium transition flex items-center justify-center gap-2">
             <i class="fa-solid fa-video"></i> Activar Visor Web
           </button>
@@ -289,7 +401,6 @@
             <i class="fa-solid fa-circle-dot"></i> Capturar Fotograma
           </button>
 
-          <!-- Subir Imagen desde Archivos/Galería -->
           <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2.5 px-3 rounded-lg font-medium transition cursor-pointer text-center border border-slate-700 flex items-center justify-center gap-2">
             <i class="fa-solid fa-image"></i> Seleccionar de Galería
             <input type="file" accept="image/*" class="hidden" onchange="handleFileUpload(event)" />
@@ -308,8 +419,14 @@
     </div>
   </div>
 
-  <!-- SCRIPT LOGIC MÓVIL + DESK -->
+  <!-- SCRIPT LOGIC -->
   <script>
+    // URL del Google Sheet de Usuarios
+    const USERS_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1vYqMxZbNIsTx5Kud_9bFiiI-OYme08ZlJFCzLVKXsiI/gviz/tq?tqx=out:csv&gid=0';
+    
+    // Web App URL de Google Apps Script (Reemplaza con tu URL)
+    const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbz5Ap-hb6e7p6JQd0mNXkSPmEYY6Vd0nNzZVCp18_CpOByuwz4VZsDBXeisFNViFqNiEw/exec'; 
+
     const SHEET_CONFIGS = [
       { id: '1EgudaTwmNvHi8eKPMQbCz8eD6fKS1GdrIuIp_R-xVfk', gid: '501282295', source: 'Abordamientos' },
       { id: '1rl28kCEfkpu9G7oly87NHw4_XGCsjWhSssMxa6Et9SY', gid: '1225183609', source: 'Detenciones' },
@@ -325,6 +442,167 @@
     let currentMapMode = 'markers';
     let activeItemForPdf = null;
     let webcamStream = null;
+    let registeredUsersList = [];
+
+    // LÓGICA DE AUTENTICACIÓN
+    function checkSession() {
+      const savedUser = localStorage.getItem('activeUser');
+      if (savedUser) {
+        const userObj = JSON.parse(savedUser);
+        document.getElementById('activeUserName').innerText = userObj.Nombre || userObj.Usuario;
+        document.getElementById('userInfoHeader').classList.remove('hidden');
+        document.getElementById('authScreen').classList.add('hidden');
+        initMap();
+        syncData();
+      } else {
+        document.getElementById('authScreen').classList.remove('hidden');
+        loadUsersFromSheet();
+      }
+    }
+
+    async function loadUsersFromSheet() {
+      try {
+        const res = await fetch(USERS_SHEET_CSV);
+        const text = await res.text();
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            registeredUsersList = results.data;
+          }
+        });
+      } catch (e) {
+        console.warn('Error cargando usuarios:', e);
+      }
+    }
+
+    function switchAuthTab(tab) {
+      const fLogin = document.getElementById('formLogin');
+      const fReg = document.getElementById('formRegister');
+      const tLogin = document.getElementById('tabLogin');
+      const tReg = document.getElementById('tabRegister');
+
+      if (tab === 'login') {
+        fLogin.classList.remove('hidden');
+        fReg.classList.add('hidden');
+        tLogin.className = 'flex-1 py-2 font-bold rounded-lg bg-blue-600 text-white transition text-center';
+        tReg.className = 'flex-1 py-2 font-bold rounded-lg text-slate-400 transition text-center hover:text-white';
+      } else {
+        fReg.classList.remove('hidden');
+        fLogin.classList.add('hidden');
+        tReg.className = 'flex-1 py-2 font-bold rounded-lg bg-emerald-600 text-white transition text-center';
+        tLogin.className = 'flex-1 py-2 font-bold rounded-lg text-slate-400 transition text-center hover:text-white';
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const uInput = document.getElementById('loginUser').value.trim().toLowerCase();
+      const pInput = document.getElementById('loginPass').value.trim();
+      const errBox = document.getElementById('loginError');
+      errBox.classList.add('hidden');
+
+      if (registeredUsersList.length === 0) {
+        await loadUsersFromSheet();
+      }
+
+      const found = registeredUsersList.find(u => {
+        const sheetUser = (u['Usuario'] || '').toString().trim().toLowerCase();
+        const sheetEmail = (u['Correo electronico'] || u['Correo electrónico'] || u['Correo'] || '').toString().trim().toLowerCase();
+        const sheetPass = (u['Password'] || u['Contraseña'] || '').toString().trim();
+
+        return (sheetUser === uInput || sheetEmail === uInput) && sheetPass === pInput;
+      });
+
+      if (found) {
+        localStorage.setItem('activeUser', JSON.stringify(found));
+        checkSession();
+      } else {
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    // CAPTURA DE UBICACIÓN PARA EL REGISTRO
+    function getCurrentLocation() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve("No soportada por el navegador");
+        } else {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve(`${position.coords.latitude}, ${position.coords.longitude}`);
+            },
+            (error) => {
+              resolve("Permiso denegado / No disponible");
+            },
+            { timeout: 5000 }
+          );
+        }
+      });
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      
+      const btnSubmit = document.getElementById('btnRegisterSubmit');
+      const loadingBox = document.getElementById('regLoading');
+      
+      btnSubmit.disabled = true;
+      btnSubmit.classList.add('opacity-50');
+      loadingBox.classList.remove('hidden');
+
+      const name = document.getElementById('regName').value.trim();
+      const user = document.getElementById('regUser').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const pass = document.getElementById('regPass').value.trim();
+      
+      // Capturar Auditoría (Hora, Ubicación, Dispositivo)
+      const auditDateTime = new Date().toLocaleString('es-MX', { timeZone: 'America/Monterrey' });
+      const auditDevice = navigator.userAgent;
+      const auditLocation = await getCurrentLocation();
+
+      const newUser = {
+        'Nombre': name,
+        'Usuario': user,
+        'Password': pass,
+        'Correo electronico': email,
+        'FechaHora': auditDateTime,
+        'Ubicacion': auditLocation,
+        'Dispositivo': auditDevice
+      };
+
+      registeredUsersList.push(newUser);
+
+      if (APPS_SCRIPT_WEBAPP_URL && APPS_SCRIPT_WEBAPP_URL !== 'URL_AQUI_DE_APPS_SCRIPT') {
+        try {
+          await fetch(APPS_SCRIPT_WEBAPP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newUser)
+          });
+        } catch (err) {
+          console.warn('Error enviando a Apps Script:', err);
+        }
+      }
+
+      loadingBox.classList.add('hidden');
+      document.getElementById('regSuccess').classList.remove('hidden');
+      
+      setTimeout(() => {
+        document.getElementById('regSuccess').classList.add('hidden');
+        document.getElementById('loginUser').value = user;
+        document.getElementById('loginPass').value = pass;
+        btnSubmit.disabled = false;
+        btnSubmit.classList.remove('opacity-50');
+        switchAuthTab('login');
+      }, 1500);
+    }
+
+    function logout() {
+      localStorage.removeItem('activeUser');
+      location.reload();
+    }
 
     function debounce(func, wait = 150) {
       let timeout;
@@ -335,7 +613,6 @@
     }
     const debouncedApplyFilters = debounce(applyFilters, 150);
 
-    // Gestor de Interfaz Móvil
     function toggleMobileSidebar() {
       const sidebar = document.getElementById('sidebarDrawer');
       const backdrop = document.getElementById('sidebarBackdrop');
@@ -372,13 +649,13 @@
       }
     }
 
-    // Inicializar Mapa con la URL y API Key solicitadas
     function initMap() {
+      if (map) return;
       map = L.map('map', { preferCanvas: true }).setView([25.6866, -100.3161], 11);
       
       const tileUrl = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3yax_1_62a7917a038a98cc4759f31f';
       L.tileLayer(tileUrl, {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
         maxZoom: 19
       }).addTo(map);
 
@@ -402,7 +679,6 @@
       return parsed;
     }
 
-    // Descarga en paralelo ultra rápida
     async function syncData() {
       const icon = document.getElementById('syncIcon');
       icon.classList.add('fa-spin');
@@ -442,6 +718,8 @@
         const photosId = parseDriveImageUrls(r['GRAFICA DE IDENTIFICACION']);
         const photosVehicle = parseDriveImageUrls(r['GRAFICA DE VEHICULO'] || r['IMAGEN']);
 
+        const detentionReason = r['TIPO DE DETENCION'] || r['Resultado de abordamiento'] || r['ENTREVISTA'] || r['OPERATIVO'] || 'Inspección / Abordamiento de Rutina';
+
         let lat = parseFloat(r['LATITUD'] || r['LAT']);
         let lng = parseFloat(r['LONGITUD'] || r['LNG']);
         if (isNaN(lat) && r['COORDENADAS DE UBICACION']) {
@@ -452,16 +730,26 @@
           }
         }
 
+        const zone = r['ZONA DE DETENCIÓN'] || r['ZONA DE ABORDAMIENTO'] || '';
+        const sector = r['SECTOR DE DETENCIÓN'] || r['SECTOR'] || '';
+        const zoneSector = (zone || sector) ? `${zone} ${sector ? 'Sector: ' + sector : ''}`.trim() : 'N/A';
+
         allRecords.push({
           id: `${source}-${idx}-${Math.random().toString(36).substring(2,7)}`,
           source: source,
           name: name || 'NO REGISTRADO',
           alias: r['ALIAS'] || r['ALIA'] || 'N/A',
           age: r['EDAD'] || r['EDAD DEL DETENIDO'] || 'N/A',
+          gender: r['SEXO'] || 'N/A',
+          origin: r['ORIGEN'] || r['ORIGINARIO'] || r['NACIONALIDAD'] || 'N/A',
           curp: r['CURP'] || 'N/A',
+          occupation: r['OCUPACION Y/O OFICIO'] || r['EMPRESA Y/O LUGAR DE TRABAJO'] || 'N/A',
           phone: r['TELEFONO'] || r['TEL'] || 'N/A',
           address: r['DOMICILIO'] || r['DOMICILIO DEL DETENIDO'] || `${r['CALLE']||''} ${r['COLONIA']||''}`.trim() || 'N/A',
           location: r['LUGAR DE ABORDAMIENTO'] || r['LUGAR DE DETENCIÓN'] || r['COLONIA'] || 'N/A',
+          detentionReason: detentionReason,
+          zoneSector: zoneSector,
+          unitCrp: r['NUMERO DE CRP QUE REALIZA EL ABORDAMIENTO'] || r['NOMINA DE CAPTURISTA'] || 'N/A',
           date: r['FECHA'] || r['FECHA DE DETENCIÓN'] || r['Marca temporal'] || 'N/A',
           time: r['HORA'] || r['HORA DE DETENCIÓN'] || '',
           plates: (r['PLACAS'] || '').toUpperCase().trim(),
@@ -492,6 +780,7 @@
           item.name.toLowerCase().includes(qGen) ||
           item.alias.toLowerCase().includes(qGen) ||
           item.curp.toLowerCase().includes(qGen) ||
+          item.detentionReason.toLowerCase().includes(qGen) ||
           item.phone.toLowerCase().includes(qGen) ||
           item.address.toLowerCase().includes(qGen)
         );
@@ -541,8 +830,17 @@
           <div class="p-3 flex-1 flex flex-col justify-between space-y-2">
             <div>
               <h3 class="font-bold text-xs sm:text-sm text-white line-clamp-1">${item.name}</h3>
-              <p class="text-[11px] text-yellow-400 font-medium">Alias: ${item.alias}</p>
+              <div class="flex items-center justify-between mt-0.5">
+                <p class="text-[11px] text-yellow-400 font-medium">Alias: ${item.alias}</p>
+                <span class="text-[10px] text-slate-400">Edad: ${item.age}</span>
+              </div>
             </div>
+
+            <div class="bg-amber-950/30 border border-amber-800/40 p-1.5 rounded-lg text-[10px]">
+              <span class="text-amber-400 font-bold block">Motivo / Evento:</span>
+              <p class="text-slate-200 line-clamp-1">${item.detentionReason}</p>
+            </div>
+
             <div class="text-[11px] text-slate-400 space-y-0.5">
               <p><i class="fa-solid fa-car text-slate-500"></i> ${item.brand} ${item.model} (${item.color})</p>
               <p class="line-clamp-1"><i class="fa-solid fa-location-dot text-slate-500"></i> ${item.location}</p>
@@ -575,6 +873,7 @@
     }
 
     function renderMapData() {
+      if (!map) return;
       markersLayer.clearLayers();
       const heatPoints = [];
 
@@ -591,6 +890,7 @@
             }).bindPopup(`
               <div class="text-slate-900 text-xs">
                 <strong>${item.name}</strong><br/>
+                <span class="text-red-700 font-semibold">${item.detentionReason}</span><br/>
                 <span>${item.brand} - ${item.plates}</span><br/>
                 <button onclick="openModalById('${item.id}')" class="mt-1 bg-blue-600 text-white px-2 py-0.5 rounded text-[10px]">Ver Dossier</button>
               </div>
@@ -618,15 +918,20 @@
       document.getElementById('mFullName').innerText = item.name;
       document.getElementById('mAlias').innerText = item.alias;
       document.getElementById('mAge').innerText = item.age;
+      document.getElementById('mGenderOrigin').innerText = `${item.gender} / ${item.origin}`;
       document.getElementById('mCurp').innerText = item.curp;
+      document.getElementById('mOccupation').innerText = item.occupation;
       document.getElementById('mPhone').innerText = item.phone;
       document.getElementById('mAddress').innerText = item.address;
+      document.getElementById('mMotive').innerText = item.detentionReason;
+      document.getElementById('mSourceBadge').innerText = item.source;
       document.getElementById('mDateTime').innerText = `${item.date} ${item.time}`;
       document.getElementById('mLocation').innerText = item.location;
+      document.getElementById('mZoneSector').innerText = item.zoneSector;
+      document.getElementById('mUnitCrp').innerText = item.unitCrp;
       document.getElementById('mVehicleInfo').innerText = `${item.brand} ${item.model} (${item.color})`;
       document.getElementById('mPlates').innerText = item.plates || 'S/N';
       document.getElementById('mVin').innerText = item.vin;
-      document.getElementById('mSource').innerText = item.source;
 
       const gallery = document.getElementById('modalGallery');
       gallery.innerHTML = '';
@@ -751,7 +1056,7 @@
                 <img src="${m.record.photosPerson[0]}" loading="lazy" class="w-9 h-9 object-cover rounded-full" />
                 <div>
                   <h5 class="font-bold text-white text-xs">${m.record.name}</h5>
-                  <p class="text-[10px] text-slate-400">Alias: ${m.record.alias} | Placas: ${m.record.plates||'N/A'}</p>
+                  <p class="text-[10px] text-amber-400">${m.record.detentionReason}</p>
                 </div>
               </div>
               <span class="bg-emerald-950 text-emerald-400 font-bold text-xs px-2 py-1 rounded border border-emerald-800">
@@ -764,8 +1069,7 @@
     }
 
     window.onload = () => {
-      initMap();
-      syncData();
+      checkSession();
     };
   </script>
 </body>
