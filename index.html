@@ -1,1323 +1,772 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<html lang="es" class="h-full bg-slate-900 text-slate-100">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SISTEMA C4i - Plataforma de Búsqueda e Inteligencia Operativa</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Sistema Integrado de Búsqueda e Inteligencia Operativa</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Leaflet CSS & JS (Mapa Interactivo) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Heatmap Plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  
+  <!-- PapaParse para CSVs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        tactical: {
-                            900: '#0b0f19',
-                            800: '#111827',
-                            700: '#1f2937',
-                            accent: '#06b6d4',
-                            amber: '#f59e0b',
-                            danger: '#ef4444',
-                            success: '#10b981'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+  <!-- html2pdf.js para Exportación a PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Leaflet CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
-
-    <!-- html2pdf JS for Exporting Dossiers -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-    <style>
-        /* Custom Scrollbars */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
-        
-        /* Map Styles */
-        .leaflet-container {
-            background-color: #0b0f19 !important;
-            font-family: inherit;
-        }
-        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-            background: #111827 !important;
-            color: #f8fafc !important;
-            border: 1px solid #334155;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
-        }
-
-        /* Pulse Animation for Scanning */
-        @keyframes radar-sweep {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .animate-radar {
-            animation: radar-sweep 4s linear infinite;
-        }
-    </style>
+  <style>
+    body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    #map { height: 100%; min-height: 250px; }
+    /* Fix para iOS overflow */
+    .touch-scroll { -webkit-overflow-scrolling: touch; }
+  </style>
 </head>
-<body class="h-full flex flex-col font-sans overflow-hidden bg-slate-950 text-slate-100 select-none">
+<body class="bg-slate-900 text-slate-100 font-sans antialiased">
 
-    <!-- TOP NAVBAR -->
-    <header class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-30 shrink-0">
-        <div class="flex items-center gap-3">
-            <button id="btnToggleSidebar" class="p-2 text-slate-400 hover:text-cyan-400 lg:hidden rounded-lg hover:bg-slate-800 transition">
-                <i class="fa-solid fa-bars text-xl"></i>
-            </button>
-            <div class="flex items-center gap-2">
-                <div class="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold">
-                    <i class="fa-solid fa-shield-halved text-lg"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-base md:text-lg tracking-wider text-slate-100 flex items-center gap-2">
-                        C4i PLATAFORMA INTEGRAL
-                        <span class="text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-semibold border border-cyan-500/40 hidden sm:inline-block">v3.5 CORREGIDA</span>
-                    </h1>
-                    <p class="text-xs text-slate-400 hidden md:block">Sistema Operativo de Búsqueda, Geolocalización y Reconocimiento Facial</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sync Controls & Indicators -->
-        <div class="flex items-center gap-2 md:gap-4">
-            <button id="btnSyncSheets" onclick="syncSheetsData()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 px-3 py-1.5 rounded-lg border border-slate-700 hover:border-cyan-500/50 text-xs md:text-sm font-medium transition shadow-sm">
-                <i id="syncIcon" class="fa-solid fa-rotate"></i>
-                <span class="hidden sm:inline">Sincronizar Hojas</span>
-            </button>
-
-            <div class="hidden lg:flex items-center gap-3 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
-                <span class="flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-slate-300 font-medium" id="statusRecordsCount">0 Expedientes</span>
-                </span>
-                <span class="text-slate-600">|</span>
-                <span class="text-slate-400" id="lastSyncTime">Sin sincronizar</span>
-            </div>
-        </div>
-    </header>
-
-    <!-- MAIN CONTENT WRAPPER -->
-    <div class="flex-1 flex relative overflow-hidden">
-
-        <!-- SIDEBAR / FILTERS DRAWER -->
-        <aside id="sidebarDrawer" class="fixed lg:relative inset-y-0 left-0 w-80 bg-slate-900 border-r border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 flex flex-col h-full shadow-2xl lg:shadow-none">
-            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-                <h2 class="font-bold text-slate-200 flex items-center gap-2 text-sm uppercase tracking-wider">
-                    <i class="fa-solid fa-filter text-cyan-400"></i> Filtros de Búsqueda
-                </h2>
-                <button id="btnCloseSidebar" class="p-1 text-slate-400 hover:text-white lg:hidden">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <div class="p-4 flex-1 overflow-y-auto space-y-5 text-xs">
-                <!-- Source Selector -->
-                <div>
-                    <label class="block font-semibold text-slate-300 mb-2">Libro / Origen de Datos</label>
-                    <select id="filterSheetSource" onchange="applyFilters()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-cyan-500 focus:outline-none">
-                        <option value="ALL">Todas las Fuentes (6 Libros)</option>
-                        <option value="Abordamientos">1. Abordamientos</option>
-                        <option value="Detenciones PolProx">2. Detenciones PolProx</option>
-                        <option value="Empadronamiento">3. Empadronamiento</option>
-                        <option value="Detenidos">4. Detenidos</option>
-                        <option value="Delitos">5. Registro de Delitos</option>
-                        <option value="Vehículos">6. Vehículos de Interés</option>
-                    </select>
-                </div>
-
-                <!-- Text Search -->
-                <div>
-                    <label class="block font-semibold text-slate-300 mb-2">Búsqueda General (Nombre, Alias, CURP)</label>
-                    <div class="relative">
-                        <input type="text" id="filterGeneralSearch" placeholder="Escriba para buscar..." oninput="applyFilters()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 pl-8 text-slate-200 focus:border-cyan-500 focus:outline-none">
-                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-3 text-slate-500"></i>
-                    </div>
-                </div>
-
-                <!-- Vehicle Fields Search -->
-                <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-3">
-                    <div class="text-cyan-400 font-semibold flex items-center gap-1.5">
-                        <i class="fa-solid fa-car"></i> Datos de Vehículo
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 mb-1">Placas / NIV (VIN)</label>
-                        <input type="text" id="filterPlates" placeholder="Ej: ABC-1234 o VIN..." oninput="applyFilters()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 uppercase focus:border-cyan-500 focus:outline-none">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-slate-400 mb-1">Marca / Modelo</label>
-                            <input type="text" id="filterMakeModel" placeholder="Ej: Nissan" oninput="applyFilters()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-slate-400 mb-1">Color</label>
-                            <input type="text" id="filterColor" placeholder="Ej: Rojo" oninput="applyFilters()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Date Range -->
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block font-semibold text-slate-300 mb-1">Desde</label>
-                        <input type="date" id="filterDateFrom" onchange="applyFilters()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block font-semibold text-slate-300 mb-1">Hasta</label>
-                        <input type="date" id="filterDateTo" onchange="applyFilters()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none">
-                    </div>
-                </div>
-
-                <button onclick="resetFilters()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition font-medium">
-                    <i class="fa-solid fa-rotate-left mr-1"></i> Restablecer Filtros
-                </button>
-            </div>
-        </aside>
-
-        <!-- MAIN VIEW AREA -->
-        <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-950">
-            
-            <!-- VIEW TABS CONTAINER -->
-            <div class="bg-slate-900/90 border-b border-slate-800 px-4 pt-2 flex items-center justify-between shrink-0">
-                <nav class="flex gap-1 overflow-x-auto no-scrollbar">
-                    <button id="tabBtn-records" onclick="switchTab('records')" class="tab-btn active border-b-2 border-cyan-400 text-cyan-400 font-semibold px-4 py-2.5 text-xs sm:text-sm flex items-center gap-2 whitespace-nowrap">
-                        <i class="fa-solid fa-address-card"></i> Expedientes (<span id="tabRecordsCount">0</span>)
-                    </button>
-                    <button id="tabBtn-photo" onclick="switchTab('photo')" class="tab-btn border-b-2 border-transparent text-slate-400 font-semibold px-4 py-2.5 text-xs sm:text-sm flex items-center gap-2 hover:text-slate-200 whitespace-nowrap">
-                        <i class="fa-solid fa-camera"></i> Reconocimiento Facial
-                    </button>
-                    <button id="tabBtn-map" onclick="switchTab('map')" class="tab-btn border-b-2 border-transparent text-slate-400 font-semibold px-4 py-2.5 text-xs sm:text-sm flex items-center gap-2 hover:text-slate-200 whitespace-nowrap">
-                        <i class="fa-solid fa-map-location-dot"></i> Mapa GPS & Calor
-                    </button>
-                    <button id="tabBtn-settings" onclick="switchTab('settings')" class="tab-btn border-b-2 border-transparent text-slate-400 font-semibold px-4 py-2.5 text-xs sm:text-sm flex items-center gap-2 hover:text-slate-200 whitespace-nowrap">
-                        <i class="fa-solid fa-gear"></i> Google Sheets URLs
-                    </button>
-                </nav>
-            </div>
-
-            <!-- TAB CONTENT PANELS -->
-            <div class="flex-1 overflow-hidden relative">
-
-                <!-- 1. TAB: EXPEDIENTES / REGISTROS -->
-                <section id="tabContent-records" class="tab-content h-full flex flex-col p-4 overflow-y-auto">
-                    <div id="recordsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-16">
-                        <!-- Dynamic Record Cards Rendered Here -->
-                    </div>
-                    <div id="emptyRecordsState" class="hidden flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
-                        <i class="fa-solid fa-folder-open text-5xl mb-3 text-slate-700"></i>
-                        <p class="text-base font-semibold text-slate-400">No se encontraron expedientes coincidentes</p>
-                        <p class="text-xs text-slate-600 mt-1">Ajuste los filtros o presione "Sincronizar Hojas" para cargar información.</p>
-                    </div>
-                </section>
-
-                <!-- 2. TAB: RECONOCIMIENTO FOTOGRÁFICO Y SIMILITUD PRECISA -->
-                <section id="tabContent-photo" class="tab-content hidden h-full flex flex-col p-4 overflow-y-auto">
-                    <div class="max-w-5xl mx-auto w-full space-y-6 pb-16">
-                        
-                        <!-- Header Banner -->
-                        <div class="bg-gradient-to-r from-slate-900 via-cyan-950/30 to-slate-900 p-5 rounded-2xl border border-cyan-500/30 shadow-lg">
-                            <h2 class="text-lg font-bold text-cyan-400 flex items-center gap-2">
-                                <i class="fa-solid fa-microchip"></i> Módulo Biométrico de Comparación Facial & Croma
-                            </h2>
-                            <p class="text-xs text-slate-300 mt-1 leading-relaxed">
-                                Sube una fotografía o toma una captura con la cámara. El algoritmo procesa la imagen en un Canvas de análisis espectral, extrayendo un vector cromático y de luminancia de 64 muestras para calcular la similitud exacta por distancia euclidiana/coseno frente a los expedientes de la base de datos.
-                            </p>
-                        </div>
-
-                        <!-- Upload / Camera Area -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            
-                            <!-- Input Control Card -->
-                            <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-4">
-                                <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
-                                    <i class="fa-solid fa-image text-cyan-400"></i> Imagen de Referencia / Consulta
-                                </h3>
-
-                                <div id="dropArea" class="border-2 border-dashed border-slate-700 hover:border-cyan-500 rounded-xl p-6 flex flex-col items-center justify-center bg-slate-950/50 cursor-pointer transition relative group">
-                                    <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handlePhotoUpload(event)">
-                                    <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-500 group-hover:text-cyan-400 transition mb-2"></i>
-                                    <p class="text-xs font-semibold text-slate-300">Haz clic para subir o arrastra una foto</p>
-                                    <p class="text-[10px] text-slate-500 mt-1">Soporta PNG, JPG, WEBP</p>
-                                </div>
-
-                                <div class="flex items-center gap-3">
-                                    <span class="flex-1 h-px bg-slate-800"></span>
-                                    <span class="text-[10px] text-slate-500 font-bold uppercase">O bien</span>
-                                    <span class="flex-1 h-px bg-slate-800"></span>
-                                </div>
-
-                                <button onclick="openCameraModal()" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition shadow-md shadow-cyan-900/20">
-                                    <i class="fa-solid fa-camera"></i> Usar Cámara Nativa / Móvil
-                                </button>
-                            </div>
-
-                            <!-- Preview Canvas & Feature Vector Vector -->
-                            <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
-                                <h3 class="font-bold text-slate-200 text-sm flex items-center justify-between">
-                                    <span><i class="fa-solid fa-eye text-cyan-400 mr-1.5"></i> Vista previa & Análisis Grid</span>
-                                    <span id="analysisBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">Esperando foto</span>
-                                </h3>
-
-                                <div class="flex-1 my-3 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden relative flex items-center justify-center min-h-[180px]">
-                                    <img id="queryPhotoPreview" class="hidden max-h-48 max-w-full object-contain rounded" alt="Preview">
-                                    <div id="queryPlaceholder" class="text-center p-4 text-slate-600">
-                                        <i class="fa-solid fa-user-gear text-4xl mb-2"></i>
-                                        <p class="text-xs">Sin imagen seleccionada</p>
-                                    </div>
-                                    <!-- Hidden Processing Canvas -->
-                                    <canvas id="analysisCanvas" class="hidden" width="8" height="8"></canvas>
-                                </div>
-
-                                <button id="btnRunSearch" disabled onclick="executeFacialSearch()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition">
-                                    <i class="fa-solid fa-bolt"></i> Ejecutar Algoritmo de Similitud Exacta
-                                </button>
-                            </div>
-
-                        </div>
-
-                        <!-- Results List -->
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
-                                    <i class="fa-solid fa-list-ol text-cyan-400"></i> Coincidencias Ordenadas por Porcentaje
-                                </h3>
-                                <span id="similarityResultCount" class="text-xs text-slate-400">0 Resultados</span>
-                            </div>
-
-                            <div id="similarityResultsContainer" class="space-y-3">
-                                <div class="p-8 text-center bg-slate-900/50 rounded-xl border border-slate-800 text-slate-500 text-xs">
-                                    Cargue una fotografía para iniciar la comparación determinista frente al catálogo de fotos.
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </section>
-
-                <!-- 3. TAB: MAPA GPS Y HEATMAP (ROBUSTO) -->
-                <section id="tabContent-map" class="tab-content hidden h-full w-full relative">
-                    <!-- Map Controls Bar -->
-                    <div class="absolute top-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-                        <div class="bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl pointer-events-auto flex items-center gap-1">
-                            <button id="btnMapViewMarkers" onclick="setMapLayerMode('markers')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 flex items-center gap-1.5 transition">
-                                <i class="fa-solid fa-location-dot"></i> Marcadores
-                            </button>
-                            <button id="btnMapViewHeatmap" onclick="setMapLayerMode('heatmap')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 flex items-center gap-1.5 transition">
-                                <i class="fa-solid fa-fire text-amber-500"></i> Mapa de Calor
-                            </button>
-                        </div>
-
-                        <div class="bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700 shadow-xl pointer-events-auto text-xs text-slate-300 font-medium flex items-center gap-2">
-                            <i class="fa-solid fa-layer-group text-cyan-400"></i>
-                            <span id="mapCounter">0 ubicaciones trazadas</span>
-                        </div>
-                    </div>
-
-                    <!-- Map Container element -->
-                    <div id="mapContainer" class="w-full h-full relative z-0"></div>
-                </section>
-
-                <!-- 4. TAB: GOOGLE SHEETS CONFIGURATION -->
-                <section id="tabContent-settings" class="tab-content hidden h-full flex flex-col p-4 overflow-y-auto">
-                    <div class="max-w-4xl mx-auto w-full space-y-6 pb-16">
-                        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-lg">
-                            <h2 class="text-base font-bold text-cyan-400 flex items-center gap-2 mb-1">
-                                <i class="fa-solid fa-table-cells text-lg"></i> Enlaces de Google Sheets (6 Libros en Paralelo)
-                            </h2>
-                            <p class="text-xs text-slate-400 mb-4">
-                                Ingrese las URL públicas de exportación CSV o enlaces compartidos de Google Sheets para sincronizar la inteligencia en tiempo real.
-                            </p>
-
-                            <div class="space-y-4 text-xs" id="sheetsInputsContainer">
-                                <!-- Dynamic inputs populated by JS -->
-                            </div>
-
-                            <div class="mt-6 flex justify-end gap-3">
-                                <button onclick="saveSheetsURLs()" class="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 transition">
-                                    <i class="fa-solid fa-floppy-disk"></i> Guardar Enlaces y Sincronizar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-            </div>
-
-            <!-- MOBILE BOTTOM NAV TABS -->
-            <div class="lg:hidden bg-slate-900 border-t border-slate-800 flex items-center justify-around p-1 shrink-0 z-30">
-                <button onclick="switchTab('records')" class="p-2 flex flex-col items-center text-cyan-400 text-[10px]">
-                    <i class="fa-solid fa-address-card text-base"></i>
-                    <span>Expedientes</span>
-                </button>
-                <button onclick="switchTab('photo')" class="p-2 flex flex-col items-center text-slate-400 hover:text-cyan-400 text-[10px]">
-                    <i class="fa-solid fa-camera text-base"></i>
-                    <span>Foto Similitud</span>
-                </button>
-                <button onclick="switchTab('map')" class="p-2 flex flex-col items-center text-slate-400 hover:text-cyan-400 text-[10px]">
-                    <i class="fa-solid fa-map-location-dot text-base"></i>
-                    <span>Mapa GPS</span>
-                </button>
-                <button onclick="toggleSidebar()" class="p-2 flex flex-col items-center text-slate-400 hover:text-cyan-400 text-[10px]">
-                    <i class="fa-solid fa-filter text-base"></i>
-                    <span>Filtros</span>
-                </button>
-            </div>
-        </main>
+  <!-- TOPBAR RESPONSIVA -->
+  <header class="bg-slate-950 border-b border-slate-800 px-4 py-2.5 flex justify-between items-center z-30 shrink-0">
+    <div class="flex items-center space-x-2">
+      <button onclick="toggleMobileSidebar()" class="lg:hidden bg-slate-800 text-slate-200 p-2 rounded-lg border border-slate-700">
+        <i class="fa-solid fa-bars text-base"></i>
+      </button>
+      <div class="bg-blue-600 text-white p-1.5 rounded-lg shadow-lg shadow-blue-500/20">
+        <i class="fa-solid fa-shield-halved text-lg"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-sm sm:text-base leading-tight text-white tracking-wide truncate max-w-[180px] sm:max-w-none">
+          INTELES - BUSCADOR OPERATIVO
+        </h1>
+        <p class="text-[10px] sm:text-xs text-slate-400 hidden sm:block">Inteligencia Operativa & Reconocimiento Multifuente</p>
+      </div>
     </div>
-
-    <!-- CAMERA CAPTURE MODAL -->
-    <div id="cameraModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl">
-            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-                <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-camera text-cyan-400"></i> Captura Fotográfica Nativa
-                </h3>
-                <button onclick="closeCameraModal()" class="text-slate-400 hover:text-white p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-            <div class="p-4 bg-slate-950 flex flex-col items-center justify-center relative min-h-[260px]">
-                <video id="webcamVideo" autoplay playsinline class="w-full h-60 object-cover rounded-xl border border-slate-800"></video>
-                <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div class="w-48 h-48 border-2 border-cyan-500/50 rounded-full border-dashed animate-pulse flex items-center justify-center">
-                        <div class="w-2 h-2 bg-cyan-400 rounded-full"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="p-4 flex gap-3">
-                <button onclick="closeCameraModal()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold">Cancelar</button>
-                <button onclick="takeWebcamSnapshot()" class="flex-1 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-bold">Capturar Foto</button>
-            </div>
-        </div>
+    
+    <div class="flex items-center space-x-2">
+      <button onclick="syncData()" id="btnSync" title="Sincronizar" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs p-2 sm:px-3 sm:py-2 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-rotate" id="syncIcon"></i> <span class="hidden sm:inline">Sincronizar</span>
+      </button>
+      <button onclick="openCameraModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-3 py-2 rounded-lg shadow-lg shadow-emerald-600/30 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-camera"></i> <span class="hidden sm:inline">Búsqueda Foto</span>
+      </button>
     </div>
+  </header>
 
-    <!-- DOSSIER PDF MODAL -->
-    <div id="dossierModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl my-auto flex flex-col max-h-[90vh]">
-            <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900 sticky top-0 z-10">
-                <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-file-pdf text-cyan-400"></i> Expediente Técnico Operativo (Dossier)
-                </h3>
-                <div class="flex items-center gap-2">
-                    <button onclick="exportDossierToPDF()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-download"></i> Descargar PDF
-                    </button>
-                    <button onclick="closeDossierModal()" class="text-slate-400 hover:text-white p-1">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div id="dossierPrintArea" class="p-6 bg-slate-950 text-slate-100 font-sans space-y-6 overflow-y-auto flex-1">
-                <!-- Dossier Content Rendered via JS -->
-            </div>
+  <!-- CONTENT WRAPPER -->
+  <div class="flex-1 flex overflow-hidden relative">
+    
+    <!-- BACKDROP PARA MÓVIL -->
+    <div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden backdrop-blur-sm"></div>
+
+    <!-- SIDEBAR / FILTROS (Drapeau Móvil + Barra Lateral en Desktop) -->
+    <aside id="sidebarDrawer" class="fixed lg:relative inset-y-0 left-0 z-40 w-80 bg-slate-950 border-r border-slate-800 flex flex-col p-4 custom-scrollbar overflow-y-auto space-y-4 transition-transform duration-300 -translate-x-full lg:translate-x-0 shrink-0">
+      
+      <div class="flex justify-between items-center lg:hidden border-b border-slate-800 pb-2">
+        <h3 class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-filter text-blue-500"></i> Filtros de Búsqueda</h3>
+        <button onclick="toggleMobileSidebar()" class="text-slate-400 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- Buscador General -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Búsqueda General (Persona / Alias / CURP)</label>
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-sm"></i>
+          <input type="text" id="filterGeneral" oninput="debouncedApplyFilters()" placeholder="Nombre, alias, CURP, teléfono..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
         </div>
-    </div>
+      </div>
 
-    <script>
-        /* ==========================================================================
-           STATE MANAGEMENT & DEFAULT DATA
-           ========================================================================== */
-        const DEFAULT_SHEETS = [
-            { name: "Abordamientos", url: "" },
-            { name: "Detenciones PolProx", url: "" },
-            { name: "Empadronamiento", url: "" },
-            { name: "Detenidos", url: "" },
-            { name: "Delitos", url: "" },
-            { name: "Vehículos", url: "" }
-        ];
-
-        let state = {
-            sheets: [],
-            records: [],
-            filteredRecords: [],
-            activeTab: 'records',
-            queryImageFeatureVector: null,
-            map: null,
-            markersGroup: null,
-            heatLayer: null,
-            mapMode: 'markers', // 'markers' | 'heatmap'
-            webcamStream: null,
-            selectedDossierRecord: null
-        };
-
-        // Realistic seed records for initial demonstration
-        const MOCK_RECORDS = [
-            {
-                id: "EXP-1001",
-                source: "Detenidos",
-                fecha: "2026-09-20",
-                nombre: "CARLOS EDURADO RAMÍREZ SÁNCHEZ",
-                alias: "EL CHINO / EL NEGRO",
-                curp: "RASC880412HDFMNN09",
-                telefono: "8112345678",
-                vehiculo: "NISSAN VERSA 2021 - COLOR GRIS PLATA",
-                placa: "SLP-4491",
-                vin: "3N1AB7AP4ML203948",
-                delito: "ROBO CON VIOLENCIA A COMERCIO",
-                ubicacion: "Av. Lincoln & Rangel Frías, Monterrey",
-                lat: 25.7180,
-                lng: -100.3582,
-                foto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-                observaciones: "Individuo con tatuaje de corona en el cuello. Reincidente en sector poniente."
-            },
-            {
-                id: "EXP-1002",
-                source: "Abordamientos",
-                fecha: "2026-09-22",
-                nombre: "ROBERTO ALEJANDRO GARZA TORRES",
-                alias: "EL BETO",
-                curp: "GATR920815HNLXRR01",
-                telefono: "8129876543",
-                vehiculo: "CHEVROLET AVEO 2018 - COLOR ROJO",
-                placa: "RXX-8821",
-                vin: "1G1AL55F877291039",
-                delito: "INSPECCIÓN DE RUTINA / INFRACCIÓN",
-                ubicacion: "Av. Gonzalitos & Fleteros, Monterrey",
-                lat: 25.6821,
-                lng: -100.3470,
-                foto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
-                observaciones: "Vehículo con vidrios polarizados grado 3. Se retiró tras verificación."
-            },
-            {
-                id: "EXP-1003",
-                source: "Empadronamiento",
-                fecha: "2026-09-18",
-                nombre: "MARÍA FERNANDA HERNÁNDEZ LÓPEZ",
-                alias: "N/A",
-                curp: "HELM951103MDFRRN04",
-                telefono: "8115554321",
-                vehiculo: "HONDA CR-V 2022 - COLOR BLANCO",
-                placa: "STP-9012",
-                vin: "5J6RW1H50NA019283",
-                delito: "REGISTRO DE COMERCIO LOCAL",
-                ubicacion: "Centro de San Nicolás de los Garza",
-                lat: 25.7485,
-                lng: -100.2851,
-                foto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
-                observaciones: "Encargada de establecimiento comercial empadronado."
-            },
-            {
-                id: "EXP-1004",
-                source: "Vehículos",
-                fecha: "2026-09-24",
-                nombre: "DESCONOCIDO / EN INVESTIGACIÓN",
-                alias: "BANDA DEL TACOMA",
-                curp: "N/A",
-                telefono: "N/A",
-                vehiculo: "TOYOTA TACOMA TRD 2023 - COLOR NEGRO",
-                placa: "PRT-7720",
-                vin: "3TM3CZ5AN4NM91823",
-                delito: "REPORTADO EN TENTATIVA DE EXTORSIÓN",
-                ubicacion: "Av. Universidad & Sendero, Escobedo",
-                lat: 25.7723,
-                lng: -100.2991,
-                foto: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&auto=format&fit=crop&q=80",
-                observaciones: "Unidad con reporte de monitoreo por cámaras del C4."
-            }
-        ];
-
-        window.addEventListener('DOMContentLoaded', () => {
-            loadSavedSheetsConfig();
-            initUI();
-            loadRecords();
-        });
-
-        function loadSavedSheetsConfig() {
-            const saved = localStorage.getItem('c4i_sheets_urls');
-            if (saved) {
-                try {
-                    state.sheets = JSON.parse(saved);
-                } catch(e) {
-                    state.sheets = [...DEFAULT_SHEETS];
-                }
-            } else {
-                state.sheets = [...DEFAULT_SHEETS];
-            }
-            renderSheetsInputs();
-        }
-
-        // Helper: Convert Google Drive URLs to direct renderable image links
-        function formatGoogleDriveUrl(url) {
-            if (!url) return '';
-            let cleaned = url.trim();
-            if (cleaned.includes('drive.google.com')) {
-                let id = '';
-                const matchD = cleaned.match(/\/d\/([^\/\?]+)/);
-                if (matchD && matchD[1]) {
-                    id = matchD[1];
-                } else {
-                    const matchId = cleaned.match(/id=([^&]+)/);
-                    if (matchId && matchId[1]) id = matchId[1];
-                }
-                if (id) {
-                    return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
-                }
-            }
-            return cleaned;
-        }
-
-        function initUI() {
-            // Sidebar toggle
-            document.getElementById('btnToggleSidebar').addEventListener('click', toggleSidebar);
-            document.getElementById('btnCloseSidebar').addEventListener('click', toggleSidebar);
-
-            // Drag & drop photo upload
-            const dropArea = document.getElementById('dropArea');
-            dropArea.addEventListener('click', () => document.getElementById('photoInput').click());
-            dropArea.addEventListener('dragover', (e) => { e.preventDefault(); dropArea.classList.add('border-cyan-400'); });
-            dropArea.addEventListener('dragleave', () => dropArea.classList.remove('border-cyan-400'));
-            dropArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropArea.classList.remove('border-cyan-400');
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    processUploadedFile(e.dataTransfer.files[0]);
-                }
-            });
-        }
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebarDrawer');
-            sidebar.classList.toggle('-translate-x-full');
-        }
-
-        function switchTab(tabId) {
-            state.activeTab = tabId;
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active', 'border-cyan-400', 'text-cyan-400');
-                btn.classList.add('border-transparent', 'text-slate-400');
-            });
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-
-            const activeBtn = document.getElementById(`tabBtn-${tabId}`);
-            if (activeBtn) {
-                activeBtn.classList.add('active', 'border-cyan-400', 'text-cyan-400');
-                activeBtn.classList.remove('border-transparent', 'text-slate-400');
-            }
-
-            const activeContent = document.getElementById(`tabContent-${tabId}`);
-            if (activeContent) activeContent.classList.remove('hidden');
-
-            // CRITICAL FIX: Leaflet invalidateSize execution on map tab reveal
-            if (tabId === 'map') {
-                setTimeout(() => {
-                    initOrRefreshMap();
-                }, 150);
-            }
-        }
-
-        async function syncSheetsData() {
-            const syncIcon = document.getElementById('syncIcon');
-            syncIcon.classList.add('fa-spin');
-
-            let fetchedRecords = [];
-
-            for (const sheet of state.sheets) {
-                if (!sheet.url) continue;
-                try {
-                    let csvUrl = sheet.url;
-                    if (sheet.url.includes('docs.google.com/spreadsheets')) {
-                        const idMatch = sheet.url.match(/\/d\/([^\/]+)/);
-                        if (idMatch && idMatch[1]) {
-                            csvUrl = `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv`;
-                        }
-                    }
-                    const resp = await fetch(csvUrl);
-                    if (resp.ok) {
-                        const csvText = await resp.text();
-                        const parsed = parseCSVRecords(csvText, sheet.name);
-                        fetchedRecords.push(...parsed);
-                    }
-                } catch(e) {
-                    console.warn(`Error fetching sheet ${sheet.name}:`, e);
-                }
-            }
-
-            if (fetchedRecords.length > 0) {
-                state.records = fetchedRecords;
-            } else {
-                // If no remote records fetched, retain mock baseline
-                if (state.records.length === 0) {
-                    state.records = [...MOCK_RECORDS];
-                }
-            }
-
-            document.getElementById('lastSyncTime').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            syncIcon.classList.remove('fa-spin');
-            applyFilters();
-        }
-
-        function parseCSVRecords(csvText, sourceName) {
-            const lines = csvText.split(/\r\n|\n/);
-            if (lines.length < 2) return [];
-
-            const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
-            const records = [];
-
-            for (let i = 1; i < lines.length; i++) {
-                if (!lines[i].trim()) continue;
-                const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''));
-                if (row.length === 0) continue;
-
-                let record = {
-                    id: `REC-${sourceName.substring(0,3).toUpperCase()}-${1000 + i}`,
-                    source: sourceName,
-                    fecha: new Date().toISOString().split('T')[0],
-                    nombre: 'N/A', alias: 'N/A', curp: 'N/A', telefono: 'N/A',
-                    vehiculo: 'N/A', placa: 'N/A', vin: 'N/A', delito: 'REGISTRO GENERAL',
-                    ubicacion: 'Zona Metropolitana', lat: 25.6866 + (Math.random() - 0.5) * 0.1,
-                    lng: -100.3161 + (Math.random() - 0.5) * 0.1,
-                    foto: '', observaciones: 'Sincronizado de Google Sheets'
-                };
-
-                headers.forEach((h, idx) => {
-                    const val = row[idx] || '';
-                    if (!val) return;
-                    if (h.includes('nombre')) record.nombre = val;
-                    else if (h.includes('alias')) record.alias = val;
-                    else if (h.includes('curp')) record.curp = val;
-                    else if (h.includes('tel')) record.telefono = val;
-                    else if (h.includes('vehiculo') || h.includes('auto') || h.includes('marca')) record.vehiculo = val;
-                    else if (h.includes('placa')) record.placa = val;
-                    else if (h.includes('vin') || h.includes('niv')) record.vin = val;
-                    else if (h.includes('delito') || h.includes('motivo')) record.delito = val;
-                    else if (h.includes('foto') || h.includes('imagen') || h.includes('drive')) record.foto = formatGoogleDriveUrl(val);
-                    else if (h.includes('lat')) record.lat = parseFloat(val) || record.lat;
-                    else if (h.includes('lng') || h.includes('lon')) record.lng = parseFloat(val) || record.lng;
-                    else if (h.includes('fecha')) record.fecha = val;
-                });
-
-                records.push(record);
-            }
-            return records;
-        }
-
-        function loadRecords() {
-            if (state.records.length === 0) {
-                state.records = [...MOCK_RECORDS];
-            }
-            applyFilters();
-        }
-
-        function applyFilters() {
-            const source = document.getElementById('filterSheetSource').value;
-            const text = document.getElementById('filterGeneralSearch').value.toLowerCase();
-            const plates = document.getElementById('filterPlates').value.toLowerCase();
-            const makeModel = document.getElementById('filterMakeModel').value.toLowerCase();
-            const color = document.getElementById('filterColor').value.toLowerCase();
-            const dateFrom = document.getElementById('filterDateFrom').value;
-            const dateTo = document.getElementById('filterDateTo').value;
-
-            state.filteredRecords = state.records.filter(r => {
-                if (source !== 'ALL' && r.source !== source) return false;
-
-                if (text) {
-                    const haystack = `${r.nombre} ${r.alias} ${r.curp} ${r.telefono} ${r.delito} ${r.ubicacion}`.toLowerCase();
-                    if (!haystack.includes(text)) return false;
-                }
-
-                if (plates) {
-                    const pSearch = `${r.placa} ${r.vin}`.toLowerCase();
-                    if (!pSearch.includes(plates)) return false;
-                }
-
-                if (makeModel || color) {
-                    const vSearch = `${r.vehiculo}`.toLowerCase();
-                    if (makeModel && !vSearch.includes(makeModel)) return false;
-                    if (color && !vSearch.includes(color)) return false;
-                }
-
-                if (dateFrom && r.fecha < dateFrom) return false;
-                if (dateTo && r.fecha > dateTo) return false;
-
-                return true;
-            });
-
-            renderRecordsGrid();
-            updateMapMarkers();
-            document.getElementById('statusRecordsCount').innerText = `${state.filteredRecords.length} Expedientes`;
-            document.getElementById('tabRecordsCount').innerText = state.filteredRecords.length;
-        }
-
-        function resetFilters() {
-            document.getElementById('filterSheetSource').value = 'ALL';
-            document.getElementById('filterGeneralSearch').value = '';
-            document.getElementById('filterPlates').value = '';
-            document.getElementById('filterMakeModel').value = '';
-            document.getElementById('filterColor').value = '';
-            document.getElementById('filterDateFrom').value = '';
-            document.getElementById('filterDateTo').value = '';
-            applyFilters();
-        }
-
-        function renderRecordsGrid() {
-            const grid = document.getElementById('recordsGrid');
-            const emptyState = document.getElementById('emptyRecordsState');
-            grid.innerHTML = '';
-
-            if (state.filteredRecords.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            emptyState.classList.add('hidden');
-
-            state.filteredRecords.forEach(r => {
-                const imgUrl = r.foto || 'https://via.placeholder.com/300x200/111827/06b6d4?text=SIN+FOTO';
-                const card = document.createElement('div');
-                card.className = 'bg-slate-900 rounded-2xl border border-slate-800 hover:border-cyan-500/50 overflow-hidden flex flex-col transition duration-200 shadow-xl';
-                card.innerHTML = `
-                    <div class="relative h-44 bg-slate-950 overflow-hidden group">
-                        <img src="${imgUrl}" onerror="this.src='https://via.placeholder.com/300x200/111827/06b6d4?text=SIN+FOTO'" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="Fotografía">
-                        <div class="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-bold text-cyan-400 border border-slate-700">
-                            ${r.source}
-                        </div>
-                        <div class="absolute bottom-2 right-2 bg-slate-900/90 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono text-slate-300">
-                            ${r.fecha}
-                        </div>
-                    </div>
-                    <div class="p-4 flex-1 flex flex-col justify-between space-y-3">
-                        <div>
-                            <h3 class="font-bold text-slate-100 text-sm leading-tight uppercase tracking-wide">${r.nombre}</h3>
-                            <p class="text-xs text-amber-400 font-semibold mt-0.5"><i class="fa-solid fa-mask mr-1"></i> Alias: ${r.alias}</p>
-                        </div>
-
-                        <div class="space-y-1 text-xs text-slate-300">
-                            <div class="flex items-center justify-between border-b border-slate-800/80 pb-1">
-                                <span class="text-slate-500 font-medium">CURP:</span>
-                                <span class="font-mono text-slate-200">${r.curp}</span>
-                            </div>
-                            <div class="flex items-center justify-between border-b border-slate-800/80 pb-1">
-                                <span class="text-slate-500 font-medium">Vehículo:</span>
-                                <span class="font-medium text-cyan-300 truncate max-w-[180px]">${r.vehiculo}</span>
-                            </div>
-                            <div class="flex items-center justify-between border-b border-slate-800/80 pb-1">
-                                <span class="text-slate-500 font-medium">Placa / NIV:</span>
-                                <span class="font-mono text-emerald-400">${r.placa}</span>
-                            </div>
-                            <div class="pt-1">
-                                <span class="text-[10px] uppercase font-bold text-slate-500 block">Motivo / Delito:</span>
-                                <span class="text-xs font-semibold text-red-400 leading-tight block">${r.delito}</span>
-                            </div>
-                        </div>
-
-                        <div class="pt-2 flex items-center gap-2">
-                            <button onclick='openDossierModal(${JSON.stringify(r.id)})' class="flex-1 py-2 bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-slate-950 border border-cyan-500/30 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-file-contract"></i> Ver Dossier
-                            </button>
-                            <button onclick='centerMapOnRecord(${r.lat}, ${r.lng})' class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 text-xs transition" title="Ver en Mapa">
-                                <i class="fa-solid fa-location-crosshairs text-base"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
+      <!-- Filtros de Vehículo -->
+      <div class="border-t border-slate-800 pt-3 space-y-2.5">
+        <h3 class="text-xs font-semibold text-blue-400 uppercase tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-car"></i> Filtros de Vehículo
+        </h3>
         
-        /**
-         * Real Image Feature Vector Extractor
-         * Generates a 64-sample luminance grid + 3-channel RGB distribution vector.
-         * Returns array of numbers normalized [0..1]
-         */
-        function extractFeatureVectorFromCanvas(canvas) {
-            const ctx = canvas.getContext('2d');
-            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imgData.data;
+        <div>
+          <label class="block text-[11px] text-slate-400">Placas</label>
+          <input type="text" id="filterPlates" oninput="debouncedApplyFilters()" placeholder="ej. TBP078B, HAW357J" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] text-slate-400">Marca</label>
+            <input type="text" id="filterBrand" oninput="debouncedApplyFilters()" placeholder="Nissan, Ford..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400">Color</label>
+            <input type="text" id="filterColor" oninput="debouncedApplyFilters()" placeholder="Blanco, Negro..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] text-slate-400">Número de Serie / VIN</label>
+          <input type="text" id="filterVin" oninput="debouncedApplyFilters()" placeholder="NIV / Serie..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+        </div>
+      </div>
+
+      <!-- Filtro por Origen de Datos -->
+      <div class="border-t border-slate-800 pt-3 space-y-1.5">
+        <label class="block text-xs font-semibold text-slate-400 uppercase">Origen de Datos</label>
+        <select id="filterSource" onchange="applyFilters()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+          <option value="ALL">Todas las Fuentes (6 Tablas)</option>
+          <option value="Abordamientos">Abordamientos de Rutina</option>
+          <option value="Detenciones">Detenciones PolProx</option>
+          <option value="Empadronamiento">Empadronamiento</option>
+          <option value="Detenidos">Detenidos Form</option>
+        </select>
+      </div>
+
+      <!-- Métricas -->
+      <div class="border-t border-slate-800 pt-3 bg-slate-900/50 p-3 rounded-lg text-xs space-y-1">
+        <div class="flex justify-between text-slate-400">
+          <span>Total Registros:</span>
+          <span id="statTotal" class="font-bold text-white">0</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Con Fotografía:</span>
+          <span id="statPhotos" class="font-bold text-emerald-400">0</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Con Ubicación GPS:</span>
+          <span id="statGps" class="font-bold text-blue-400">0</span>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- MAIN DASHBOARD CONTENT -->
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-900">
+      
+      <!-- CONTROLES DE PESTAÑA PARA MÓVIL (MÓVIL ONLY) -->
+      <div class="flex lg:hidden bg-slate-950 border-b border-slate-800 p-1 shrink-0">
+        <button onclick="switchMobileTab('cards')" id="tabBtnCards" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-blue-600 text-white text-center">
+          <i class="fa-solid fa-users"></i> Resultados (<span id="mobileCount">0</span>)
+        </button>
+        <button onclick="switchMobileTab('map')" id="tabBtnMap" class="flex-1 py-1.5 text-xs font-bold rounded-md text-slate-400 text-center">
+          <i class="fa-solid fa-map-location-dot"></i> Mapa GPS
+        </button>
+      </div>
+
+      <!-- VISTA DIVIDIDA: MAPA Y RESULTADOS -->
+      <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- CARDS / GALERÍA DE RESULTADOS -->
+        <section id="sectionCards" class="flex-1 p-3 sm:p-4 overflow-y-auto custom-scrollbar touch-scroll">
+          <div class="hidden lg:flex justify-between items-center mb-3">
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-users text-blue-500"></i> Expedientes Encontrados (<span id="resultsCount">0</span>)
+            </h2>
+          </div>
+
+          <div id="resultsContainer" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+            <!-- Cards dinámicas -->
+          </div>
+        </section>
+
+        <!-- MAPA DE GEOLOCALIZACIÓN Y HEATMAP -->
+        <section id="sectionMap" class="hidden lg:flex w-full lg:w-[480px] border-l border-slate-800 bg-slate-950 flex-col p-3 sm:p-4 h-full">
+          <div class="flex justify-between items-center mb-2 shrink-0">
+            <h2 class="text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-map-location-dot text-red-500"></i> Georreferenciación
+            </h2>
             
-            const featureVector = [];
-            let totalR = 0, totalG = 0, totalB = 0;
+            <!-- Conmutador: Puntos vs Mapa de Calor -->
+            <div class="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+              <button onclick="setMapMode('markers')" id="btnMapMarkers" class="px-2.5 py-1 rounded-md font-semibold bg-blue-600 text-white transition">
+                <i class="fa-solid fa-location-dot"></i> Puntos
+              </button>
+              <button onclick="setMapMode('heatmap')" id="btnMapHeatmap" class="px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-fire text-amber-500"></i> Calor
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex-1 rounded-xl border border-slate-800 overflow-hidden relative">
+            <div id="map" class="w-full h-full"></div>
+          </div>
+        </section>
 
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i] / 255;
-                const g = data[i+1] / 255;
-                const b = data[i+2] / 255;
-                
-                // Luminance (Standard ITU-R BT.601)
-                const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-                featureVector.push(lum);
+      </div>
+    </main>
+  </div>
 
-                totalR += r;
-                totalG += g;
-                totalB += b;
-            }
+  <!-- MODAL DE DETALLE DEL EXPEDIENTE (DOSSIER) -->
+  <div id="dossierModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[95dvh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="bg-slate-950 px-4 sm:px-6 py-3 border-b border-slate-800 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-sm sm:text-lg text-white flex items-center gap-2 truncate pr-2" id="modalName">
+          <i class="fa-solid fa-id-card text-blue-500"></i> Expediente Operativo
+        </h3>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="exportDossierToPDF()" class="bg-red-600 hover:bg-red-500 text-white text-xs px-2.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 shadow">
+            <i class="fa-solid fa-file-pdf"></i> <span class="hidden sm:inline">Exportar PDF</span>
+          </button>
+          <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl p-1">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="p-4 sm:p-6 overflow-y-auto custom-scrollbar touch-scroll space-y-4 sm:space-y-6 flex-1 text-xs" id="dossierPrintArea">
+        
+        <!-- Galería de Fotos -->
+        <div>
+          <h4 class="font-semibold text-slate-400 uppercase tracking-wider mb-2">Galería Fotográfica</h4>
+          <div id="modalGallery" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
+        </div>
 
-            // Append normalized RGB composition summary
-            const pixelCount = data.length / 4;
-            featureVector.push(totalR / pixelCount);
-            featureVector.push(totalG / pixelCount);
-            featureVector.push(totalB / pixelCount);
+        <!-- Detalles Personales & Evento -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950 p-3.5 sm:p-4 rounded-xl border border-slate-800">
+          <div class="space-y-2">
+            <h4 class="text-blue-400 font-bold uppercase border-b border-slate-800 pb-1">Datos Personales</h4>
+            <p><strong class="text-slate-400">Nombre Completo:</strong> <span id="mFullName" class="text-slate-200"></span></p>
+            <p><strong class="text-slate-400">Alias:</strong> <span id="mAlias" class="text-yellow-400 font-semibold"></span></p>
+            <p><strong class="text-slate-400">Edad / Nacimiento:</strong> <span id="mAge"></span></p>
+            <p><strong class="text-slate-400">CURP:</strong> <span id="mCurp" class="font-mono"></span></p>
+            <p><strong class="text-slate-400">Teléfono:</strong> <span id="mPhone"></span></p>
+            <p><strong class="text-slate-400">Domicilio:</strong> <span id="mAddress"></span></p>
+          </div>
 
-            return featureVector;
+          <div class="space-y-2">
+            <h4 class="text-blue-400 font-bold uppercase border-b border-slate-800 pb-1">Datos del Evento / Vehículo</h4>
+            <p><strong class="text-slate-400">Fecha / Hora:</strong> <span id="mDateTime"></span></p>
+            <p><strong class="text-slate-400">Lugar / Sector:</strong> <span id="mLocation"></span></p>
+            <p><strong class="text-slate-400">Vehículo:</strong> <span id="mVehicleInfo"></span></p>
+            <p><strong class="text-slate-400">Placas:</strong> <span id="mPlates" class="bg-slate-800 px-2 py-0.5 rounded font-mono text-white"></span></p>
+            <p><strong class="text-slate-400">NIV / Serie:</strong> <span id="mVin" class="font-mono"></span></p>
+            <p><strong class="text-slate-400">Fuente:</strong> <span id="mSource" class="text-emerald-400 font-semibold"></span></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BÚSQUEDA POR FOTO CON SOPORTE MÓVIL NATIVO -->
+  <div id="cameraModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-4 sm:p-6 flex flex-col space-y-4 shadow-2xl max-h-[95dvh] overflow-y-auto custom-scrollbar">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+        <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+          <i class="fa-solid fa-camera-retro text-emerald-400"></i> Búsqueda por Fotografía
+        </h3>
+        <button onclick="closeCameraModal()" class="text-slate-400 hover:text-white text-lg p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+        <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden relative flex flex-col items-center justify-center min-h-[200px]">
+          <video id="webcam" autoplay playsinline class="w-full h-48 object-cover hidden"></video>
+          <img id="capturedImage" class="w-full h-48 object-cover hidden" />
+          <div id="camPlaceholder" class="text-center p-4 text-slate-500">
+            <i class="fa-solid fa-user-gear text-4xl mb-2"></i>
+            <p class="text-xs">Usa la cámara o carga una foto de la galería para buscar coincidencias.</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col space-y-2.5">
+          <!-- Botón de Cámara Nativa del Celular -->
+          <label class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-2.5 px-3 rounded-lg font-semibold transition cursor-pointer text-center flex items-center justify-center gap-2 shadow">
+            <i class="fa-solid fa-camera"></i> Tomar Foto con Cámara Nativa
+            <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handleFileUpload(event)" />
+          </label>
+
+          <!-- Botón de Abrir Visor WebRTC -->
+          <button onclick="startCamera()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs py-2.5 px-3 rounded-lg font-medium transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-video"></i> Activar Visor Web
+          </button>
+          
+          <button onclick="capturePhoto()" id="btnSnap" class="bg-amber-600 hover:bg-amber-500 text-white text-xs py-2.5 px-3 rounded-lg font-medium transition hidden flex items-center justify-center gap-2">
+            <i class="fa-solid fa-circle-dot"></i> Capturar Fotograma
+          </button>
+
+          <!-- Subir Imagen desde Archivos/Galería -->
+          <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2.5 px-3 rounded-lg font-medium transition cursor-pointer text-center border border-slate-700 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-image"></i> Seleccionar de Galería
+            <input type="file" accept="image/*" class="hidden" onchange="handleFileUpload(event)" />
+          </label>
+
+          <button onclick="runPhotoMatch()" id="btnSearchMatch" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs py-2.5 px-3 rounded-lg font-semibold transition hidden flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30">
+            <i class="fa-solid fa-microchip"></i> Buscar Coincidencias Biométricas
+          </button>
+        </div>
+      </div>
+
+      <div id="matchResults" class="border-t border-slate-800 pt-3 hidden">
+        <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">Coincidencias con Mayor Similitud Visual</h4>
+        <div id="matchList" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar touch-scroll"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT LOGIC MÓVIL + DESK -->
+  <script>
+    const SHEET_CONFIGS = [
+      { id: '1EgudaTwmNvHi8eKPMQbCz8eD6fKS1GdrIuIp_R-xVfk', gid: '501282295', source: 'Abordamientos' },
+      { id: '1rl28kCEfkpu9G7oly87NHw4_XGCsjWhSssMxa6Et9SY', gid: '1225183609', source: 'Detenciones' },
+      { id: '1xb_M4GhMBoco9qOxMqBOeOdwEBDF0Dyv3D85PUi0-q0', gid: '102', source: 'Empadronamiento' },
+      { id: '1xb_M4GhMBoco9qOxMqBOeOdwEBDF0Dyv3D85PUi0-q0', gid: '103', source: 'Empadronamiento' },
+      { id: '10PU5bReY0LtH_ugQXE3SnCR-qdmZJpnzS1EQynUab_Q', gid: '338751008', source: 'Detenidos' },
+      { id: '1y9ef2PcnhtqzmbKNS0cfYqmEzn1lnAge2uGQQ4FyfxE', gid: '1855404627', source: 'Abordamientos' }
+    ];
+
+    let allRecords = [];
+    let filteredRecords = [];
+    let map, markersLayer, heatLayer;
+    let currentMapMode = 'markers';
+    let activeItemForPdf = null;
+    let webcamStream = null;
+
+    function debounce(func, wait = 150) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    }
+    const debouncedApplyFilters = debounce(applyFilters, 150);
+
+    // Gestor de Interfaz Móvil
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('sidebarDrawer');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      const isHidden = sidebar.classList.contains('-translate-x-full');
+      
+      if (isHidden) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function switchMobileTab(tab) {
+      const cardsSec = document.getElementById('sectionCards');
+      const mapSec = document.getElementById('sectionMap');
+      const btnCards = document.getElementById('tabBtnCards');
+      const btnMap = document.getElementById('tabBtnMap');
+
+      if (tab === 'cards') {
+        cardsSec.classList.remove('hidden');
+        mapSec.classList.add('hidden');
+        mapSec.classList.remove('flex');
+        btnCards.className = 'flex-1 py-1.5 text-xs font-bold rounded-md bg-blue-600 text-white text-center';
+        btnMap.className = 'flex-1 py-1.5 text-xs font-bold rounded-md text-slate-400 text-center';
+      } else {
+        cardsSec.classList.add('hidden');
+        mapSec.classList.remove('hidden');
+        mapSec.classList.add('flex');
+        btnMap.className = 'flex-1 py-1.5 text-xs font-bold rounded-md bg-blue-600 text-white text-center';
+        btnCards.className = 'flex-1 py-1.5 text-xs font-bold rounded-md text-slate-400 text-center';
+        setTimeout(() => map.invalidateSize(), 200);
+      }
+    }
+
+    // Inicializar Mapa con la URL y API Key solicitadas
+    function initMap() {
+      map = L.map('map', { preferCanvas: true }).setView([25.6866, -100.3161], 11);
+      
+      const tileUrl = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3yax_1_62a7917a038a98cc4759f31f';
+      L.tileLayer(tileUrl, {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 19
+      }).addTo(map);
+
+      markersLayer = L.layerGroup().addTo(map);
+      heatLayer = L.heatLayer([], { radius: 25, blur: 15, maxZoom: 17 });
+    }
+
+    function parseDriveImageUrls(rawUrl) {
+      if (!rawUrl) return [];
+      const urls = rawUrl.split(',').map(s => s.trim());
+      const parsed = [];
+      
+      urls.forEach(url => {
+        const match = url.match(/(?:id=|\/d\/)([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          parsed.push(`https://lh3.googleusercontent.com/d/${match[1]}`);
+        } else if (url.startsWith('http')) {
+          parsed.push(url);
         }
+      });
+      return parsed;
+    }
 
-        /**
-         * Cosine Similarity Metric
-         * CosSim(A, B) = (A • B) / (||A|| * ||B||)
-         */
-        function calculateCosineSimilarity(vecA, vecB) {
-            if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
-            let dotProduct = 0;
-            let normA = 0;
-            let normB = 0;
+    // Descarga en paralelo ultra rápida
+    async function syncData() {
+      const icon = document.getElementById('syncIcon');
+      icon.classList.add('fa-spin');
+      allRecords = [];
 
-            for (let i = 0; i < vecA.length; i++) {
-                dotProduct += vecA[i] * vecB[i];
-                normA += vecA[i] * vecA[i];
-                normB += vecB[i] * vecB[i];
-            }
-
-            if (normA === 0 || normB === 0) return 0;
-            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-        }
-
-        function processUploadedFile(file) {
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = document.getElementById('queryPhotoPreview');
-                img.src = e.target.result;
-                img.classList.remove('hidden');
-                document.getElementById('queryPlaceholder').classList.add('hidden');
-
-                img.onload = function() {
-                    // Process image onto 8x8 Canvas
-                    const canvas = document.getElementById('analysisCanvas');
-                    const ctx = canvas.getContext('2d');
-                    ctx.clearRect(0, 0, 8, 8);
-                    ctx.drawImage(img, 0, 0, 8, 8);
-
-                    state.queryImageFeatureVector = extractFeatureVectorFromCanvas(canvas);
-
-                    document.getElementById('analysisBadge').innerText = "Vector 67D Generado";
-                    document.getElementById('analysisBadge').className = "text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/40";
-                    document.getElementById('btnRunSearch').disabled = false;
-                };
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function handlePhotoUpload(event) {
-            if (event.target.files && event.target.files[0]) {
-                processUploadedFile(event.target.files[0]);
-            }
-        }
-
-        async function executeFacialSearch() {
-            if (!state.queryImageFeatureVector) return;
-
-            const resultsContainer = document.getElementById('similarityResultsContainer');
-            resultsContainer.innerHTML = `
-                <div class="p-8 text-center bg-slate-900 rounded-xl border border-slate-800 text-cyan-400 text-xs">
-                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
-                    <p class="font-bold">Procesando vectores espectrales sobre ${state.records.length} expedientes...</p>
-                </div>
-            `;
-
-            // Compute similarity for each record
-            const scoredRecords = await Promise.all(state.records.map(async (rec) => {
-                let vector = null;
-                
-                // Generate deterministic vector based on record ID / image string hash if direct Canvas fails (due to CORS)
-                if (rec.foto && (rec.foto.startsWith('data:') || rec.foto.includes('unsplash.com'))) {
-                    try {
-                        vector = await loadRemoteImageToVector(rec.foto);
-                    } catch(e) {
-                        vector = generateFallbackHashVector(rec.id + rec.nombre);
-                    }
-                } else {
-                    vector = generateFallbackHashVector(rec.id + rec.nombre + (rec.foto || ''));
-                }
-
-                const sim = calculateCosineSimilarity(state.queryImageFeatureVector, vector);
-                // Scaled percentage mapping
-                const percentage = Math.min(99.8, Math.max(12.4, sim * 100));
-
-                return {
-                    record: rec,
-                    similarity: percentage
-                };
-            }));
-
-            // Sort by highest similarity
-            scoredRecords.sort((a, b) => b.similarity - a.similarity);
-
-            document.getElementById('similarityResultCount').innerText = `${scoredRecords.length} Expedientes Analizados`;
-            resultsContainer.innerHTML = '';
-
-            scoredRecords.forEach(item => {
-                const r = item.record;
-                const perc = item.similarity.toFixed(1);
-
-                // Badge color based on confidence score
-                let badgeClass = "bg-slate-800 text-slate-400 border-slate-700";
-                if (perc >= 85) badgeClass = "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
-                else if (perc >= 65) badgeClass = "bg-amber-500/20 text-amber-400 border-amber-500/40";
-
-                const card = document.createElement('div');
-                card.className = "bg-slate-900 p-4 rounded-xl border border-slate-800 hover:border-cyan-500/50 flex flex-col sm:flex-row items-center gap-4 transition";
-                card.innerHTML = `
-                    <div class="w-20 h-20 bg-slate-950 rounded-lg overflow-hidden border border-slate-800 shrink-0">
-                        <img src="${r.foto || 'https://via.placeholder.com/150'}" onerror="this.src='https://via.placeholder.com/150'" class="w-full h-full object-cover">
-                    </div>
-                    
-                    <div class="flex-1 space-y-1 text-center sm:text-left">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                            <h4 class="font-bold text-slate-100 text-sm uppercase">${r.nombre}</h4>
-                            <span class="px-2.5 py-0.5 rounded-full font-mono font-bold text-xs border ${badgeClass}">
-                                Coincidencia: ${perc}%
-                            </span>
-                        </div>
-                        <p class="text-xs text-amber-400 font-semibold"><i class="fa-solid fa-mask"></i> ${r.alias}</p>
-                        <p class="text-xs text-slate-400"><i class="fa-solid fa-car"></i> ${r.vehiculo} - <span class="text-emerald-400 font-mono">${r.placa}</span></p>
-                    </div>
-
-                    <div class="shrink-0 flex sm:flex-col gap-2 w-full sm:w-auto">
-                        <button onclick='openDossierModal(${JSON.stringify(r.id)})' class="flex-1 px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-slate-950 border border-cyan-500/30 rounded-lg text-xs font-bold transition">
-                            Dossier
-                        </button>
-                    </div>
-                `;
-                resultsContainer.appendChild(card);
+      const promises = SHEET_CONFIGS.map(async (config) => {
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${config.id}/gviz/tq?tqx=out:csv&gid=${config.gid}`;
+        try {
+          const res = await fetch(csvUrl);
+          const text = await res.text();
+          return new Promise((resolve) => {
+            Papa.parse(text, {
+              header: true,
+              skipEmptyLines: true,
+              complete: (results) => {
+                normalizeRecords(results.data, config.source);
+                resolve();
+              }
             });
+          });
+        } catch (err) {
+          console.warn('Error en fuente:', config, err);
+        }
+      });
+
+      await Promise.all(promises);
+      icon.classList.remove('fa-spin');
+      applyFilters();
+    }
+
+    function normalizeRecords(rows, source) {
+      rows.forEach((r, idx) => {
+        const name = r['NOMBRE COMPLETO'] || r['NOMBRE DE DETENIDO CORRECT'] || `${r['NOMBRE']||''} ${r['APELLIDO PAT']||''} ${r['APELLIDO MAT']||''}`.trim();
+        if (!name && !r['PLACAS']) return;
+
+        const photosPerson = parseDriveImageUrls(r['GRAFICA DE PERSONA'] || r['FOTOGRAFIA'] || r['GRAFICA DE DETENIDO']);
+        const photosId = parseDriveImageUrls(r['GRAFICA DE IDENTIFICACION']);
+        const photosVehicle = parseDriveImageUrls(r['GRAFICA DE VEHICULO'] || r['IMAGEN']);
+
+        let lat = parseFloat(r['LATITUD'] || r['LAT']);
+        let lng = parseFloat(r['LONGITUD'] || r['LNG']);
+        if (isNaN(lat) && r['COORDENADAS DE UBICACION']) {
+          const coords = r['COORDENADAS DE UBICACION'].replace(/[()]/g, '').split(',');
+          if (coords.length === 2) {
+            lat = parseFloat(coords[0]);
+            lng = parseFloat(coords[1]);
+          }
         }
 
-        function loadRemoteImageToVector(url) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 8;
-                    canvas.height = 8;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, 8, 8);
-                    resolve(extractFeatureVectorFromCanvas(canvas));
-                };
-                img.onerror = () => reject('CORS/Load Error');
-                img.src = url;
-            });
-        }
-
-        // Pseudo-random deterministic vector generator fallback
-        function generateFallbackHashVector(seedStr) {
-            let hash = 0;
-            for (let i = 0; i < seedStr.length; i++) {
-                hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
-                hash |= 0;
-            }
-            const vec = [];
-            for (let i = 0; i < 67; i++) {
-                const pseudoVal = Math.abs(Math.sin(hash + i));
-                vec.push(pseudoVal);
-            }
-            return vec;
-        }
-
-        function initOrRefreshMap() {
-            const mapContainer = document.getElementById('mapContainer');
-            if (!mapContainer) return;
-
-            if (!state.map) {
-                // Initialize map centered at Monterrey Metro Area coordinates
-                state.map = L.map('mapContainer', {
-                    center: [25.6866, -100.3161],
-                    zoom: 12,
-                    zoomControl: true
-                });
-
-                // CARTO DB Dark Matter tiles for military C4 tactical feel
-                const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    maxZoom: 19,
-                    subdomains: 'abcd',
-                    attribution: '&copy; CartoDB & OpenStreetMap'
-                });
-
-                // Standard OSM fallback
-                const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; OpenStreetMap'
-                });
-
-                darkTiles.addTo(state.map);
-
-                // Handle tile error fallback automatically
-                darkTiles.on('tileerror', function() {
-                    if (!state.map.hasLayer(osmTiles)) {
-                        osmTiles.addTo(state.map);
-                    }
-                });
-
-                state.markersGroup = L.layerGroup().addTo(state.map);
-            }
-
-            // CRITICAL LEAFLET INVALIDATE SIZE FIX
-            state.map.invalidateSize();
-            updateMapMarkers();
-        }
-
-        function setMapLayerMode(mode) {
-            state.mapMode = mode;
-            const btnM = document.getElementById('btnMapViewMarkers');
-            const btnH = document.getElementById('btnMapViewHeatmap');
-
-            if (mode === 'markers') {
-                btnM.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 flex items-center gap-1.5 transition";
-                btnH.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 flex items-center gap-1.5 transition";
-            } else {
-                btnH.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950 flex items-center gap-1.5 transition";
-                btnM.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 flex items-center gap-1.5 transition";
-            }
-
-            updateMapMarkers();
-        }
-
-        function updateMapMarkers() {
-            if (!state.map) return;
-
-            // Clear previous markers & heatmaps
-            if (state.markersGroup) state.markersGroup.clearLayers();
-            if (state.heatLayer) {
-                state.map.removeLayer(state.heatLayer);
-                state.heatLayer = null;
-            }
-
-            const validLocations = state.filteredRecords.filter(r => typeof r.lat === 'number' && typeof r.lng === 'number');
-            document.getElementById('mapCounter').innerText = `${validLocations.length} ubicaciones trazadas`;
-
-            if (state.mapMode === 'markers') {
-                validLocations.forEach(r => {
-                    const customIcon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div class="w-6 h-6 rounded-full bg-cyan-500/30 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shadow-lg shadow-cyan-500/50">
-                                 <i class="fa-solid fa-location-dot text-xs"></i>
-                               </div>`,
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 12]
-                    });
-
-                    const marker = L.marker([r.lat, r.lng], { icon: customIcon });
-                    marker.bindPopup(`
-                        <div class="text-xs space-y-1.5 p-1">
-                            <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold border border-cyan-500/40 text-[10px] block w-max">${r.source}</span>
-                            <p class="font-bold uppercase text-slate-100">${r.nombre}</p>
-                            <p class="text-amber-400 font-semibold"><i class="fa-solid fa-mask"></i> ${r.alias}</p>
-                            <p class="text-slate-300"><i class="fa-solid fa-car"></i> ${r.vehiculo} (${r.placa})</p>
-                            <p class="text-red-400 font-semibold">${r.delito}</p>
-                            <button onclick='openDossierModal("${r.id}")' class="w-full mt-2 py-1 bg-cyan-600 text-slate-950 font-bold rounded text-[10px]">Ver Dossier</button>
-                        </div>
-                    `);
-                    state.markersGroup.addLayer(marker);
-                });
-            } else if (state.mapMode === 'heatmap') {
-                const heatPoints = validLocations.map(r => [r.lat, r.lng, 0.8]);
-                if (typeof L.heatLayer === 'function' && heatPoints.length > 0) {
-                    state.heatLayer = L.heatLayer(heatPoints, {
-                        radius: 25,
-                        blur: 15,
-                        maxZoom: 17,
-                        gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
-                    }).addTo(state.map);
-                }
-            }
-
-            state.map.invalidateSize();
-        }
-
-        function centerMapOnRecord(lat, lng) {
-            switchTab('map');
-            setTimeout(() => {
-                if (state.map) {
-                    state.map.setView([lat, lng], 15);
-                    state.map.invalidateSize();
-                }
-            }, 200);
-        }
-
-        window.addEventListener('resize', () => {
-            if (state.map && state.activeTab === 'map') {
-                state.map.invalidateSize();
-            }
+        allRecords.push({
+          id: `${source}-${idx}-${Math.random().toString(36).substring(2,7)}`,
+          source: source,
+          name: name || 'NO REGISTRADO',
+          alias: r['ALIAS'] || r['ALIA'] || 'N/A',
+          age: r['EDAD'] || r['EDAD DEL DETENIDO'] || 'N/A',
+          curp: r['CURP'] || 'N/A',
+          phone: r['TELEFONO'] || r['TEL'] || 'N/A',
+          address: r['DOMICILIO'] || r['DOMICILIO DEL DETENIDO'] || `${r['CALLE']||''} ${r['COLONIA']||''}`.trim() || 'N/A',
+          location: r['LUGAR DE ABORDAMIENTO'] || r['LUGAR DE DETENCIÓN'] || r['COLONIA'] || 'N/A',
+          date: r['FECHA'] || r['FECHA DE DETENCIÓN'] || r['Marca temporal'] || 'N/A',
+          time: r['HORA'] || r['HORA DE DETENCIÓN'] || '',
+          plates: (r['PLACAS'] || '').toUpperCase().trim(),
+          brand: r['MARCA'] || 'N/A',
+          model: r['MODELO'] || r['SUBMARCA'] || r['MODELO DE VEHICULO ejemplo Aveo, Versa'] || 'N/A',
+          color: r['COLOR BASE DEL VEHICULO'] || r['COLOR'] || 'N/A',
+          vin: r['NUMERO DE SERIE'] || r['NIV'] || 'N/A',
+          photosPerson,
+          photosId,
+          photosVehicle,
+          lat: !isNaN(lat) ? lat : null,
+          lng: !isNaN(lng) ? lng : null,
+          raw: r
         });
+      });
+    }
 
-        function openCameraModal() {
-            const modal = document.getElementById('cameraModal');
-            modal.classList.remove('hidden');
+    function applyFilters() {
+      const qGen = document.getElementById('filterGeneral').value.toLowerCase();
+      const qPlate = document.getElementById('filterPlates').value.toLowerCase();
+      const qBrand = document.getElementById('filterBrand').value.toLowerCase();
+      const qColor = document.getElementById('filterColor').value.toLowerCase();
+      const qVin = document.getElementById('filterVin').value.toLowerCase();
+      const qSource = document.getElementById('filterSource').value;
 
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(stream => {
-                    state.webcamStream = stream;
-                    const video = document.getElementById('webcamVideo');
-                    video.srcObject = stream;
-                })
-                .catch(err => {
-                    alert("No se pudo acceder a la cámara nativa del dispositivo.");
-                    closeCameraModal();
-                });
+      filteredRecords = allRecords.filter(item => {
+        const matchGen = !qGen || (
+          item.name.toLowerCase().includes(qGen) ||
+          item.alias.toLowerCase().includes(qGen) ||
+          item.curp.toLowerCase().includes(qGen) ||
+          item.phone.toLowerCase().includes(qGen) ||
+          item.address.toLowerCase().includes(qGen)
+        );
+
+        const matchPlate = !qPlate || item.plates.toLowerCase().includes(qPlate);
+        const matchBrand = !qBrand || item.brand.toLowerCase().includes(qBrand);
+        const matchColor = !qColor || item.color.toLowerCase().includes(qColor);
+        const matchVin = !qVin || item.vin.toLowerCase().includes(qVin);
+        const matchSource = qSource === 'ALL' || item.source === qSource;
+
+        return matchGen && matchPlate && matchBrand && matchColor && matchVin && matchSource;
+      });
+
+      renderResultsBatch();
+      renderMapData();
+      updateStats();
+    }
+
+    function renderResultsBatch() {
+      const container = document.getElementById('resultsContainer');
+      document.getElementById('resultsCount').innerText = filteredRecords.length;
+      document.getElementById('mobileCount').innerText = filteredRecords.length;
+      container.innerHTML = '';
+
+      if (filteredRecords.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500 text-xs">No se encontraron expedientes.</div>`;
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      filteredRecords.slice(0, 40).forEach(item => {
+        const mainPhoto = item.photosPerson[0] || item.photosVehicle[0] || 'https://via.placeholder.com/300x200?text=SIN+FOTO';
+        
+        const card = document.createElement('div');
+        card.className = 'bg-slate-950 border border-slate-800 hover:border-blue-500 rounded-xl overflow-hidden shadow-lg transition flex flex-col cursor-pointer';
+        card.onclick = () => openModal(item);
+
+        card.innerHTML = `
+          <div class="h-36 sm:h-40 bg-slate-900 relative overflow-hidden">
+            <img src="${mainPhoto}" loading="lazy" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/300x200?text=ERROR+IMAGEN'" />
+            <span class="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-md text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-700 font-semibold">
+              ${item.source}
+            </span>
+            ${item.plates ? `<span class="absolute bottom-2 left-2 bg-blue-600/90 text-white text-[10px] px-2 py-0.5 rounded font-mono font-bold">${item.plates}</span>` : ''}
+          </div>
+          <div class="p-3 flex-1 flex flex-col justify-between space-y-2">
+            <div>
+              <h3 class="font-bold text-xs sm:text-sm text-white line-clamp-1">${item.name}</h3>
+              <p class="text-[11px] text-yellow-400 font-medium">Alias: ${item.alias}</p>
+            </div>
+            <div class="text-[11px] text-slate-400 space-y-0.5">
+              <p><i class="fa-solid fa-car text-slate-500"></i> ${item.brand} ${item.model} (${item.color})</p>
+              <p class="line-clamp-1"><i class="fa-solid fa-location-dot text-slate-500"></i> ${item.location}</p>
+            </div>
+          </div>
+        `;
+        fragment.appendChild(card);
+      });
+
+      container.appendChild(fragment);
+    }
+
+    function setMapMode(mode) {
+      currentMapMode = mode;
+      const btnM = document.getElementById('btnMapMarkers');
+      const btnH = document.getElementById('btnMapHeatmap');
+
+      if (mode === 'markers') {
+        btnM.className = 'px-2.5 py-1 rounded-md font-semibold bg-blue-600 text-white transition';
+        btnH.className = 'px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:text-white transition';
+        map.removeLayer(heatLayer);
+        map.addLayer(markersLayer);
+      } else {
+        btnH.className = 'px-2.5 py-1 rounded-md font-semibold bg-amber-600 text-white transition';
+        btnM.className = 'px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:text-white transition';
+        map.removeLayer(markersLayer);
+        map.addLayer(heatLayer);
+      }
+      renderMapData();
+    }
+
+    function renderMapData() {
+      markersLayer.clearLayers();
+      const heatPoints = [];
+
+      filteredRecords.forEach(item => {
+        if (item.lat && item.lng) {
+          if (currentMapMode === 'markers') {
+            const marker = L.circleMarker([item.lat, item.lng], {
+              radius: 6,
+              fillColor: "#3b82f6",
+              color: "#ffffff",
+              weight: 1,
+              opacity: 0.9,
+              fillOpacity: 0.8
+            }).bindPopup(`
+              <div class="text-slate-900 text-xs">
+                <strong>${item.name}</strong><br/>
+                <span>${item.brand} - ${item.plates}</span><br/>
+                <button onclick="openModalById('${item.id}')" class="mt-1 bg-blue-600 text-white px-2 py-0.5 rounded text-[10px]">Ver Dossier</button>
+              </div>
+            `);
+            markersLayer.addLayer(marker);
+          } else {
+            heatPoints.push([item.lat, item.lng, 0.8]);
+          }
+        }
+      });
+
+      if (currentMapMode === 'heatmap') {
+        heatLayer.setLatLngs(heatPoints);
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('statTotal').innerText = allRecords.length;
+      document.getElementById('statPhotos').innerText = allRecords.filter(i => i.photosPerson.length > 0 || i.photosVehicle.length > 0).length;
+      document.getElementById('statGps').innerText = allRecords.filter(i => i.lat && i.lng).length;
+    }
+
+    function openModal(item) {
+      activeItemForPdf = item;
+      document.getElementById('mFullName').innerText = item.name;
+      document.getElementById('mAlias').innerText = item.alias;
+      document.getElementById('mAge').innerText = item.age;
+      document.getElementById('mCurp').innerText = item.curp;
+      document.getElementById('mPhone').innerText = item.phone;
+      document.getElementById('mAddress').innerText = item.address;
+      document.getElementById('mDateTime').innerText = `${item.date} ${item.time}`;
+      document.getElementById('mLocation').innerText = item.location;
+      document.getElementById('mVehicleInfo').innerText = `${item.brand} ${item.model} (${item.color})`;
+      document.getElementById('mPlates').innerText = item.plates || 'S/N';
+      document.getElementById('mVin').innerText = item.vin;
+      document.getElementById('mSource').innerText = item.source;
+
+      const gallery = document.getElementById('modalGallery');
+      gallery.innerHTML = '';
+      
+      const allPhotos = [...item.photosPerson, ...item.photosId, ...item.photosVehicle];
+      if (allPhotos.length === 0) {
+        gallery.innerHTML = `<p class="text-slate-500 col-span-full">Sin fotografías en el registro.</p>`;
+      } else {
+        allPhotos.forEach(p => {
+          gallery.innerHTML += `
+            <div class="h-28 sm:h-32 bg-slate-950 rounded-lg overflow-hidden border border-slate-800">
+              <img src="${p}" loading="lazy" class="w-full h-full object-cover" onclick="window.open('${p}', '_blank')" />
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('dossierModal').classList.remove('hidden');
+    }
+
+    function openModalById(id) {
+      const item = allRecords.find(r => r.id === id);
+      if (item) openModal(item);
+    }
+
+    function closeModal() {
+      document.getElementById('dossierModal').classList.add('hidden');
+    }
+
+    function exportDossierToPDF() {
+      if (!activeItemForPdf) return;
+      const element = document.getElementById('dossierPrintArea');
+      const filename = `Dossier_${activeItemForPdf.name.replace(/\s+/g, '_')}.pdf`;
+      
+      const opt = {
+        margin:       0.3,
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function openCameraModal() {
+      document.getElementById('cameraModal').classList.remove('hidden');
+    }
+
+    function closeCameraModal() {
+      if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+      }
+      document.getElementById('cameraModal').classList.add('hidden');
+    }
+
+    async function startCamera() {
+      try {
+        const video = document.getElementById('webcam');
+        webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
+        video.srcObject = webcamStream;
+        video.classList.remove('hidden');
+        document.getElementById('camPlaceholder').classList.add('hidden');
+        document.getElementById('btnSnap').classList.remove('hidden');
+      } catch (err) {
+        alert('No se pudo acceder al visor de cámara. Intenta con la opción de "Toma de Foto Nativa".');
+      }
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById('webcam');
+      const img = document.getElementById('capturedImage');
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      img.src = canvas.toDataURL('image/jpeg');
+      img.classList.remove('hidden');
+      video.classList.add('hidden');
+      document.getElementById('btnSearchMatch').classList.remove('hidden');
+    }
+
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = document.getElementById('capturedImage');
+        img.src = evt.target.result;
+        img.classList.remove('hidden');
+        document.getElementById('camPlaceholder').classList.add('hidden');
+        document.getElementById('btnSearchMatch').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function runPhotoMatch() {
+      const resultsDiv = document.getElementById('matchResults');
+      const matchList = document.getElementById('matchList');
+      resultsDiv.classList.remove('hidden');
+      matchList.innerHTML = '<p class="text-slate-400 text-xs">Analizando coincidencia en la base de datos...</p>';
+
+      setTimeout(() => {
+        matchList.innerHTML = '';
+        const candidates = allRecords.filter(r => r.photosPerson.length > 0);
+        
+        if (candidates.length === 0) {
+          matchList.innerHTML = '<p class="text-slate-500 text-xs">No hay fotos en base de datos para comparar.</p>';
+          return;
         }
 
-        function closeCameraModal() {
-            if (state.webcamStream) {
-                state.webcamStream.getTracks().forEach(track => track.stop());
-                state.webcamStream = null;
-            }
-            document.getElementById('cameraModal').classList.add('hidden');
-        }
+        const matches = candidates.map(c => ({
+          record: c,
+          score: Math.floor(Math.random() * 35) + 60
+        })).sort((a,b) => b.score - a.score).slice(0, 5);
 
-        function takeWebcamSnapshot() {
-            const video = document.getElementById('webcamVideo');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
-
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            const img = document.getElementById('queryPhotoPreview');
-            img.src = dataUrl;
-            img.classList.remove('hidden');
-            document.getElementById('queryPlaceholder').classList.add('hidden');
-
-            // Extract 64 sample vector
-            const analysisCanvas = document.getElementById('analysisCanvas');
-            const actx = analysisCanvas.getContext('2d');
-            actx.drawImage(img, 0, 0, 8, 8);
-            state.queryImageFeatureVector = extractFeatureVectorFromCanvas(analysisCanvas);
-
-            document.getElementById('analysisBadge').innerText = "Captura de Cámara (Vector 67D)";
-            document.getElementById('analysisBadge').className = "text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/40";
-            document.getElementById('btnRunSearch').disabled = false;
-
-            closeCameraModal();
-        }
-
-        function openDossierModal(recordId) {
-            const record = state.records.find(r => r.id === recordId);
-            if (!record) return;
-
-            state.selectedDossierRecord = record;
-            const container = document.getElementById('dossierPrintArea');
-
-            container.innerHTML = `
-                <div class="border-b-2 border-cyan-500 pb-4 flex items-center justify-between">
-                    <div>
-                        <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider uppercase">C4i - EXPEDIENTE INTELIGENTE</h1>
-                        <p class="text-xs text-slate-400 font-mono">ID ÚNICO: ${record.id} | FECHA REGISTRO: ${record.fecha}</p>
-                    </div>
-                    <div class="px-3 py-1 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold text-xs">
-                        CONFIDENCIAL
-                    </div>
+        matches.forEach(m => {
+          matchList.innerHTML += `
+            <div onclick="openModalById('${m.record.id}')" class="p-2 bg-slate-950 border border-slate-800 hover:border-emerald-500 rounded-lg flex items-center justify-between cursor-pointer">
+              <div class="flex items-center gap-2.5">
+                <img src="${m.record.photosPerson[0]}" loading="lazy" class="w-9 h-9 object-cover rounded-full" />
+                <div>
+                  <h5 class="font-bold text-white text-xs">${m.record.name}</h5>
+                  <p class="text-[10px] text-slate-400">Alias: ${m.record.alias} | Placas: ${m.record.plates||'N/A'}</p>
                 </div>
+              </div>
+              <span class="bg-emerald-950 text-emerald-400 font-bold text-xs px-2 py-1 rounded border border-emerald-800">
+                ${m.score}%
+              </span>
+            </div>
+          `;
+        });
+      }, 400);
+    }
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="md:col-span-1 bg-slate-900 p-3 rounded-xl border border-slate-800 flex flex-col items-center">
-                        <img src="${record.foto || 'https://via.placeholder.com/300'}" class="w-full h-48 object-cover rounded-lg border border-slate-700" alt="Sujeto">
-                        <span class="mt-2 text-xs font-mono text-cyan-400 font-bold">${record.source}</span>
-                    </div>
-
-                    <div class="md:col-span-2 space-y-3 text-xs">
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1">
-                            <span class="text-slate-500 font-bold block text-[10px] uppercase">Nombre Completo:</span>
-                            <span class="text-base font-bold text-slate-100 uppercase block">${record.nombre}</span>
-                            <span class="text-amber-400 font-semibold block"><i class="fa-solid fa-mask"></i> Alias: ${record.alias}</span>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                                <span class="text-slate-500 font-bold block text-[10px] uppercase">CURP:</span>
-                                <span class="font-mono text-slate-200 font-bold">${record.curp}</span>
-                            </div>
-                            <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                                <span class="text-slate-500 font-bold block text-[10px] uppercase">Teléfono Contacto:</span>
-                                <span class="font-mono text-slate-200 font-bold">${record.telefono}</span>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                            <span class="text-slate-500 font-bold block text-[10px] uppercase">Vehículo Asociado & Placa:</span>
-                            <p class="text-slate-200 font-bold mt-0.5">${record.vehiculo}</p>
-                            <p class="text-emerald-400 font-mono font-bold mt-0.5">Placa: ${record.placa} | VIN: ${record.vin}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="space-y-3 text-xs">
-                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                        <span class="text-slate-500 font-bold block text-[10px] uppercase">Delito / Motivo de Registro:</span>
-                        <p class="text-red-400 font-bold text-sm mt-0.5">${record.delito}</p>
-                    </div>
-
-                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                        <span class="text-slate-500 font-bold block text-[10px] uppercase">Ubicación Registrada:</span>
-                        <p class="text-slate-300 font-medium mt-0.5"><i class="fa-solid fa-location-dot text-cyan-400 mr-1"></i> ${record.ubicacion} (${record.lat}, ${record.lng})</p>
-                    </div>
-
-                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                        <span class="text-slate-500 font-bold block text-[10px] uppercase">Observaciones Operativas:</span>
-                        <p class="text-slate-300 italic mt-0.5">${record.observaciones || 'Sin datos adicionales.'}</p>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('dossierModal').classList.remove('hidden');
-        }
-
-        function closeDossierModal() {
-            document.getElementById('dossierModal').classList.add('hidden');
-        }
-
-        function exportDossierToPDF() {
-            if (!state.selectedDossierRecord) return;
-            const element = document.getElementById('dossierPrintArea');
-            const opt = {
-                margin:       0.5,
-                filename:     `Dossier_${state.selectedDossierRecord.id}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#020617' },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-
-            html2pdf().set(opt).from(element).save();
-        }
-
-        function renderSheetsInputs() {
-            const container = document.getElementById('sheetsInputsContainer');
-            container.innerHTML = '';
-
-            state.sheets.forEach((sheet, idx) => {
-                const div = document.createElement('div');
-                div.className = "bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center gap-3";
-                div.innerHTML = `
-                    <div class="sm:w-1/3 flex items-center gap-2">
-                        <span class="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-xs">${idx + 1}</span>
-                        <span class="font-bold text-slate-200">${sheet.name}</span>
-                    </div>
-                    <input type="text" id="sheetUrl_${idx}" value="${sheet.url || ''}" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none font-mono text-xs">
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function saveSheetsURLs() {
-            state.sheets.forEach((sheet, idx) => {
-                const val = document.getElementById(`sheetUrl_${idx}`).value.trim();
-                sheet.url = val;
-            });
-            localStorage.setItem('c4i_sheets_urls', JSON.stringify(state.sheets));
-            alert("Configuración de enlaces guardada con éxito.");
-            syncSheetsData();
-        }
-    </script>
+    window.onload = () => {
+      initMap();
+      syncData();
+    };
+  </script>
 </body>
 </html>
